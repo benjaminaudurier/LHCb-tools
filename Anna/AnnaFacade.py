@@ -4,7 +4,7 @@
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
 
-from Ostap.Data import Data 
+from Ostap.Data import Data, Data2 
 import AnnaConfig 
 
 
@@ -19,7 +19,7 @@ class AnnaFacade:
 		- dataset : file that will be given to Ostap::Data class 
 					which contains the datasets paths.
 
-		- chain : chain name (ex: "jpsi/DecayTree")
+		- chain_list : lists containinf chain(s) name(s) (ex: ["jpsi/DecayTree"]).
 
 		- configfile : read by AnnaConfig to configure 
 						our object (See AnnaConfig for details)
@@ -30,12 +30,14 @@ class AnnaFacade:
 	"""
 
 	## constructor
-	def __init__(self, datafile=None, chain="", configfile=None):
+	def __init__(self, datafile=None, chain_list=[], configfile=None):
 
-		# Try to read file 
+		self._tree
+		self._configfile
+
+		# Read file for data pattern 
 		pattern = []
 		file
-
 		try: 
 			file = open(datafile, 'r')
 		except:
@@ -44,9 +46,24 @@ class AnnaFacade:
 		for line in file:
 			pattern.append(line)
 		file.close()
-			
-		self._tree = Data(chain, pattern)
-		self._configfile = AnnaConfig(configfile)
+		
+		# Set _tree with the correct data constructor
+		if len(chain_list) == 2:
+			self._tree = Data2(chain_list[0], chain_list[1], pattern)
+
+		elif len(chain_list) == 1:
+			self._tree = Data2(chain_list[0], pattern)
+
+		else:
+			print "Too much chains in {0}, please check it".format(chain_list)
+			return
+
+		# Set _configfile 
+		if (self._configfile=AnnaConfig(configfile)) is True:
+			print "config file set !"
+
+		else:
+			print "Cannot set config file"
 
 	def _get_configfile(self):
 		return self._configfile
