@@ -1,14 +1,11 @@
 # =============================================================================
-#  @class AnnaFacade
+#  @class AnnaMuMuFacade
 #  Facade class of the offline analysis framework Anna
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
-
-from Ostap.Data import Data, Data2 
 import AnnaConfig 
 
-
-class AnnaFacade:
+class AnnaMuMuFacade:
 	"""
 	The framework is meant to work inside the LHCb framework 
 	as it relies evely on OSTAP.
@@ -30,7 +27,7 @@ class AnnaFacade:
 	"""
 
 	## constructor
-	def __init__(self, datafile=None, chain_list=[], configfile=None):
+	def __init__(self, datafile=None, tree=None, configfile=None):
 
 		self._tree
 		self._configfile
@@ -59,7 +56,7 @@ class AnnaFacade:
 			return
 
 		# Set _configfile 
-		if (self._configfile=AnnaConfig(configfile)) is True:
+		if (self._configfile = AnnaConfig(configfile)) is True:
 			print "config file set !"
 
 		else:

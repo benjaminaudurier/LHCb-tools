@@ -1,10 +1,10 @@
 # =============================================================================
-## @class AnnaConfig
+## @class AnnaMuMuConfig
 #  helper class to store steering options for other Anna classes 
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
 
-class AnnaConfig:
+class AnnaMuMuConfig:
 	""" 
 	Holds some options like the fit to be performed, conditions on the kinematices ...
 	This class reads an extern file config.anna. 
