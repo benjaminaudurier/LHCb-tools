@@ -12,7 +12,14 @@ class AnnaMuMuConfig:
 	"""
 
 	## constructor
-	def __init__(self, configfile=None):
+	def __init__(self):
+		print("coucou le constructeur")
+
+
+	def ReadFromFile(self, configfile=None):
+		
+		print "Coucou !"
+		return True
 
 # =============================================================================
 # The END 

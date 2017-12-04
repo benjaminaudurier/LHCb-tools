@@ -3,7 +3,8 @@
 #  Facade class of the offline analysis framework Anna
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
-import AnnaConfig 
+from .AnnaMuMuConfig import AnnaMuMuConfig as AnnaMuMuConfig
+from ROOT import TChain 
 
 class AnnaMuMuFacade:
 	"""
@@ -13,10 +14,9 @@ class AnnaMuMuFacade:
 	in an Ostap session (lb-run Bender/latest ostap).
 
 	This class takes 3 arguments :
-		- dataset : file that will be given to Ostap::Data class 
-					which contains the datasets paths.
-
-		- chain_list : lists containinf chain(s) name(s) (ex: ["jpsi/DecayTree"]).
+		- tchain : A first TChain object containing the data.
+		
+		- tchain2 : A second TChain object, not medatory, but usefull in MC studies for instance.
 
 		- configfile : read by AnnaConfig to configure 
 						our object (See AnnaConfig for details)
@@ -27,36 +27,22 @@ class AnnaMuMuFacade:
 	"""
 
 	## constructor
-	def __init__(self, datafile=None, tree=None, configfile=None):
+	def __init__(self, tchain=None, tchain2=None, configfile=None):
 
-		self._tree
-		self._configfile
-
-		# Read file for data pattern 
-		pattern = []
-		file
-		try: 
-			file = open(datafile, 'r')
-		except:
-			print("Cannot read datafile {}".format(datafile))
+		self._tchain = tchain
+		self._tchain2 = tchain2
+		self._configfile = AnnaMuMuConfig()
 		
-		for line in file:
-			pattern.append(line)
-		file.close()
-		
-		# Set _tree with the correct data constructor
-		if len(chain_list) == 2:
-			self._tree = Data2(chain_list[0], chain_list[1], pattern)
+		if self._tchain is not None and type(self._tchain) is not TChain:
+			print("{} is not a TChain".format(tchain))
+			return
 
-		elif len(chain_list) == 1:
-			self._tree = Data2(chain_list[0], pattern)
-
-		else:
-			print "Too much chains in {0}, please check it".format(chain_list)
+		if self._tchain2 is not None and type(self._tchain2) is not TChain:
+			print("{} is not a TChain".format(tchain2))
 			return
 
 		# Set _configfile 
-		if (self._configfile = AnnaConfig(configfile)) is True:
+		if self._configfile.ReadFromFile(configfile) is True:
 			print "config file set !"
 
 		else:
@@ -65,8 +51,11 @@ class AnnaMuMuFacade:
 	def _get_configfile(self):
 		return self._configfile
 
-	def _get_tree(self):
-		return self._tree
+	def _get_tchain(self):
+		return self._tchain
+
+	def _get_tchain2(self):
+		return self._tchain
 
 # =============================================================================
 # The END 
