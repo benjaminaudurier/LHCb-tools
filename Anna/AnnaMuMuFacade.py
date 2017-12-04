@@ -27,7 +27,7 @@ class AnnaMuMuFacade:
 	"""
 
 	## constructor
-	def __init__(self, tchain=None, tchain2=None, configfile=None):
+	def __init__(self, tchain=None, tchain2=None, configfile=""):
 
 		self._tchain = tchain
 		self._tchain2 = tchain2
@@ -48,14 +48,29 @@ class AnnaMuMuFacade:
 		else:
 			print "Cannot set config file"
 
-	def _get_configfile(self):
-		return self._configfile
+	# ______________________________________
+	def __str__(self):
+		return "I am your father"
+				
+	# ______________________________________
+	def FitParticle(self, particle_name="jpsi"):
+		return
 
-	def _get_tchain(self):
-		return self._tchain
+	# ______________________________________
+	def DrawMinv(self, particle_name="jpsi"):
+		return
 
-	def _get_tchain2(self):
-		return self._tchain
+	# ______________________________________
+	def DrawFitResults(self, particle_name="jpsi"):
+		return
+
+	# ______________________________________
+	def DrawNofWhat(self, particle_name="jpsi"):
+		return
+
+	# ______________________________________
+	def SaveResults(self, AnnaMuMuResults):
+		return
 
 # =============================================================================
 # The END 
