@@ -9,20 +9,19 @@ import os
 class AnnaMuMuConfig:
 	""" 
 	Holds some options like the fit to be performed, conditions on the kinematices ...
-	This class reads an extern file config.anna. 
-	Each line should be written as <key> : <value> <type> 
+	This class reads an extern text file and store info in a dictionnary. 
+	Each line of the config file should be written as <key> : <value> 
 	"""
 
-	## constructor
+	# ______________________________________
 	def __init__(self):	
-		""" Initialize data member """
+		""" cstr """
 		self._map = dict()
 		self._key = (
 			"Centrality", 
 			"Cut", 
-			"FitType",
-			"ResultFileName"	
-		)
+			"FitType"		
+			)
 
 	# ______________________________________
 	def ReadFromFile(self, configfile=""):
@@ -49,12 +48,28 @@ class AnnaMuMuConfig:
 			return True
 
 	# ______________________________________
-	def PrintMap(self):
-		print self._map
+	def GetCentrality(self):
+		return self.Map()["Centrality"]
+
+	# ______________________________________
+	def GetCut(self):
+		return self.Map()["Cut"]
+
+	# ______________________________________
+	def GetFitType(self):
+		return self.Map()["FitType"]
+
+	# ______________________________________
+	def Map(self):
+		return self._map.copy()
 
 	# ______________________________________
 	def PrintKey(self):
 		print self._key
+
+	# ______________________________________
+	def PrintMap(self):
+		print self._map
 
 	# ______________________________________
 	def DecodeLine(self, ligne=""):
@@ -69,11 +84,6 @@ class AnnaMuMuConfig:
 			return "", ""
 		else:
 			return split_ligne[0], split_ligne[1]
-
-
-
-
-
 
 
 # =============================================================================
