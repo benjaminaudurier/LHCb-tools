@@ -20,7 +20,8 @@ class AnnaMuMuConfig:
 		self._key = (
 			"Centrality", 
 			"Cut", 
-			"FitType"		
+			"FitType",
+			"LeafPrefix"		
 			)
 
 	# ______________________________________
@@ -58,6 +59,10 @@ class AnnaMuMuConfig:
 	# ______________________________________
 	def GetFitType(self):
 		return self.Map()["FitType"]
+
+	# ______________________________________
+	def GetLeafPrefix(self):
+		return self.Map()["LeafPrefix"]
 
 	# ______________________________________
 	def Map(self):

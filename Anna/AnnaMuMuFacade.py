@@ -1,6 +1,5 @@
 # =============================================================================
 #  @class AnnaMuMuFacade
-#  Facade class of the offline analysis framework Anna
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
 from .AnnaMuMuConfig import AnnaMuMuConfig
@@ -100,7 +99,7 @@ class AnnaMuMuFacade:
 		return
 				
 	# ______________________________________
-	def FitParticle(self, particle_name="jpsi", binning=None, option=""):
+	def FitParticle(self, particle_name="jpsi", binning=[], option=""):
 		"""Fit invariant mass spectrum
 		
 		Run over all combination of Centrality/Cut/FitType from the config.
@@ -118,18 +117,30 @@ class AnnaMuMuFacade:
 
 		print " ================================================================ " 
 		print "        			FitParticle {} for \
-											binning {}".format(particle_name, binning) 
+											binning {}".format(particle_name, binning[0]) 
 		print " ================================================================ " 
 
 		config = self.Config()
 
 		for centrality in config.GetCentrality():
 			for cut in config.GetCut():
-				for fit_type in config.GetFitType():
-					spectrapath = "/FitParticle/{}/{}/{}".format(centrality, cut)
-					fitter = AnnaMuMuFitter(particle_name, binning)
-					spectra = fitter.Fit(centrality, cut, fit_type, option)
-					self.AdoptSectra(spectra, spectrapath)
+				for prefix in config.GetLeafPrefix():
+
+					if self._tchain is not None:
+						spectrapath = "{}/FitParticle/{}/{}/{}".format(
+							self._tchain.GetName(), centrality, cut, prefix)
+						fitter = AnnaMuMuFitter(particle_name, binning)
+						spectra = fitter.Fit(
+							self._tchain, prefix, centrality, cut, config.GetFitType(), option)
+						self.AdoptSectra(spectra, spectrapath)
+
+					if self._tchain2 is not None:
+						spectrapath = "{}/FitParticle/{}/{}/{}".format(
+							self._tchain2.GetName(), centrality, cut, prefix)
+						fitter = AnnaMuMuFitter(particle_name, binning)
+						spectra = fitter.Fit(
+							self._tchain2, prefix, centrality, cut, config.GetFitType(), option)
+						self.AdoptSectra(spectra, spectrapath)
 
 		return
 
@@ -147,7 +158,7 @@ class AnnaMuMuFacade:
 
 		else:
 			print "Creating Result File ..."
-			f = TFile.Open('AnnaResults.root','recreate')
+			f = TFile.Open('AnnaResults.root', 'recreate')
 			return f
 
 	# ______________________________________

@@ -1,5 +1,5 @@
 # =============================================================================
-#  @class AnnaMuMuFacade
+#  @class AnnaMuMuResult
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
 
