@@ -5,6 +5,7 @@
 #  @date   2017-11-30 
 
 import os
+import warnings
 
 class AnnaMuMuConfig:
 	""" 
@@ -19,10 +20,10 @@ class AnnaMuMuConfig:
 		self._map = dict()
 		self._key = (
 			"Centrality", 
-			"Cut", 
+			"CutCombination", 
 			"FitType",
-			"LeafPrefix"		
-			)
+			"Leaf"			
+		)
 
 	# ______________________________________
 	def ReadFromFile(self, configfile=""):
@@ -44,7 +45,8 @@ class AnnaMuMuConfig:
 				if len(entries) > 0:
 					self._map[key_name] = tuple(entries)
 				else:
-					print "Warning: No entries for key {}".format(key_name)
+					warnings.warn("No entries for key {}, set default".format(key_name))
+					self._map[key_name] = self.GetDefaultEntry(key_name)
 			
 			return True
 
@@ -53,17 +55,24 @@ class AnnaMuMuConfig:
 		return self.Map()["Centrality"]
 
 	# ______________________________________
-	def GetCut(self):
-		return self.Map()["Cut"]
+	def GetCutCombination(self):
+		return self.Map()["CutCombination"]
 
 	# ______________________________________
 	def GetFitType(self):
 		return self.Map()["FitType"]
 
 	# ______________________________________
-	def GetLeafPrefix(self):
-		return self.Map()["LeafPrefix"]
+	def GetLeaf(self):
+		return self.Map()["Leaf"]
 
+	# ______________________________________
+	def GetDefaultEntry(self, key_name):
+		if key_name == "Centrality": 
+			return "ALL"
+		else:  
+			return "None"
+			
 	# ______________________________________
 	def Map(self):
 		return self._map.copy()
@@ -84,11 +93,13 @@ class AnnaMuMuConfig:
 		split_ligne = ligne.split(":")
 
 		# check the len
-		if len(split_ligne) is not 2:
-			print("Error : format of {} in confige file is not correct, should be \"key:values \"".format(ligne))
+		try:
+			assert len(split_ligne) == 2
+		except AssertionError:
+			print("Format of {} in config file is not correct, should be \"key:values \"".format(ligne))
 			return "", ""
-		else:
-			return split_ligne[0], split_ligne[1]
+			
+		return split_ligne[0], split_ligne[1]
 
 
 # =============================================================================

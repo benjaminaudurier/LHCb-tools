@@ -123,23 +123,23 @@ class AnnaMuMuFacade:
 		config = self.Config()
 
 		for centrality in config.GetCentrality():
-			for cut in config.GetCut():
-				for prefix in config.GetLeafPrefix():
+			for cuts in config.GetCutCombination():
+				for leaf in config.GetLeaf():
 
 					if self._tchain is not None:
 						spectrapath = "{}/FitParticle/{}/{}/{}".format(
-							self._tchain.GetName(), centrality, cut, prefix)
+							self._tchain.GetName(), centrality, cuts, leaf)
 						fitter = AnnaMuMuFitter(particle_name, binning)
 						spectra = fitter.Fit(
-							self._tchain, prefix, centrality, cut, config.GetFitType(), option)
+							self._tchain, leaf, centrality, cuts, config.GetFitType(), option)
 						self.AdoptSectra(spectra, spectrapath)
 
 					if self._tchain2 is not None:
 						spectrapath = "{}/FitParticle/{}/{}/{}".format(
-							self._tchain2.GetName(), centrality, cut, prefix)
+							self._tchain2.GetName(), centrality, cuts, leaf)
 						fitter = AnnaMuMuFitter(particle_name, binning)
 						spectra = fitter.Fit(
-							self._tchain2, prefix, centrality, cut, config.GetFitType(), option)
+							self._tchain2, leaf, centrality, cuts, config.GetFitType(), option)
 						self.AdoptSectra(spectra, spectrapath)
 
 		return

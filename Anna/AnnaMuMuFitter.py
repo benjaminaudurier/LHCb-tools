@@ -6,7 +6,7 @@
 from .AnnaMuMuSpectra import AnnaMuMuSpectra
 from .AnnaMuMuResult import AnnaMuMuResult
 from ROOT import TChain
-from ROOT import TH1, TH2
+from ROOT import TH1F, TH2F
 
 class AnnaMuMuFitter:
 	"""helper class for fit process.
@@ -32,7 +32,7 @@ class AnnaMuMuFitter:
 		self._particle_name = particle		
 		# centrality percentage based on VELO cluster cut
 		self._centrality = {
-			"branch": ["VELOTHITS"] 
+			"branch": ["VELOTHITS"], 
 			"90_100": [0, 1311],
 			"80_90": [1311, 3009],
 			"70_80": [3009, 5580],
@@ -67,29 +67,31 @@ class AnnaMuMuFitter:
 		# Check binning ordening
 		for i, limit in enumerate(binning[1:]):
 			if limit > binning[i + 1]:
-				order = False
+				ok = False
 
-		if ok is True:
-			return binning
-
-		else:
+		try:
+			assert ok is True
+		except AssertionError:
+			print "Binning is wrong"
 			return None
 
+		return binning
+		
 	# ______________________________________
 	def DefaultBinning(self):
 		return "INTEGRATED,PT,Y"
 
 	# ______________________________________
-	def Fit(self, tchain, leaf_prefix, centrality, cut, fit_type, option):
+	def Fit(self, tchain, leaf, centrality, cuts, fit_type, option):
 		"""[summary]
 		
 		[description]
 		
 		Arguments:
 			tchain {[type]} -- [description]
-			leaf_prefix {[type]} -- [description]
+			leaf {[type]} -- [description]
 			centrality {[type]} -- [description]
-			cut {[type]} -- [description]
+			cuts {[type]} -- [description]
 			fit_type {[type]} -- [description]
 			option {[type]} -- [description]
 		
@@ -116,8 +118,8 @@ class AnnaMuMuFitter:
 				bin_limits = [self._binning[i], self._binning[i + 1]]
 				# Get Histo
 				histo = self.GetHisto(
-					bintype, bin_limits,
-					leaf_prefix, centrality, cut)
+					tchain, bintype, bin_limits,
+					leaf, centrality, cuts)
 				# Construct our AnnaMuMuRestult for a given bin
 				annaresult = AnnaMuMuResult(
 					self._particle_name, histo,
@@ -132,14 +134,14 @@ class AnnaMuMuFitter:
 			return spectra
 
 		elif bintype == "INTEGRATED":
-			fwaef
+			print "To be implemented"
 
 		else:
 			print("Unknown bin type {}".format(bintype))
 			return None
 
 	# ______________________________________
-	def GetHisto(self, bintype, bin_limits, leaf_prefix, centrality, cut):
+	def GetHisto(self, tchain, bintype, bin_limits, leaf, centrality, cuts):
 		"""[summary]
 		
 		[description]
@@ -147,10 +149,32 @@ class AnnaMuMuFitter:
 		Arguments:
 			bintype {[type]} -- [description]
 			bin_limits {[type]} -- [description]
-			leaf_prefix {[type]} -- [description]
+			leaf {[type]} -- [description]
 			centrality {[type]} -- [description]
-			cut {[type]} -- [description]
+			cuts {[type]} -- [description]
 		"""
+	
+		ok_leaf = self.CheckLeafName(tchain, leaf)
+
+		try:
+			assert ok_leaf is True
+		except AssertionError:
+			print("Cannot find leaf {}".format(leaf))
+			return None
+
+		tchain.Draw("{}>>histo".format(leaf), cuts, "goff")
+
+		histo = tchain.GetHistogram()
+
+		try:
+			assert histo is not None
+		except AssertionError:
+			print("Cannot get histo from leaf {}".format(leaf))
+			return None
+
+		return histo
+
+
 
 		
 
