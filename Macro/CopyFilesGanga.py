@@ -42,11 +42,11 @@ if __name__ == '__main__':
                                 print " --- Skip this file and the other ones"
                                 skip_file = keep_all
 
-                        elif decision == "Y":
+                        elif decision == "N":
                                 print " --- Skip this file: "+split_line[-2]+'/'+split_line[-1].replace("\n", '')
                                 continue 
 
-                        elif decision == 'N':
+                        elif decision == 'Y':
                                 print ' --- Delete file '+split_line[-2]+'/'+split_line[-1].replace('\n', '')
                                 os.remove('{0}/{1}'.format(split_line[-2], split_line[-1].replace('\n', '')))
 
