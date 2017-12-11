@@ -49,25 +49,96 @@ class AnnaMuMuFitter:
 		
 	# ______________________________________
 	def CheckBinning(self, binning):
-		""" Check bining format"""
+		""" Check binning format"""
 		
 		ok = True
+		2D = False
 
-		# Check if binning is known
-		if binning[0] not in self.DefaultBinning():
-			print("Don't know this binning {} ... \
-					Possibles are {}".format(self._binning[0], self.DefaultBinning()))
+		#Check size
+		try:
+			assert len(binning) > 2
+		except AssertionError:
+			print "binning is too small"
 			ok = False
 
-		# Check binning size
-		if (binning[0] == "PT" or binning[0] == "Y") and (len(binning[1:]) < 2):
-			print("Not enought bins ({}), required at least 2".format(len(binning[1:])))
-			ok = False
+		# Check if 2D binning
+		if len(binning[0]) > 2:
+			if len(binning[1]) > 2:
+				print ' --- Fit with a 2D binning {}-{}'.format(binning[0][0],
+																binning[1][0])
+				2D = True
 
-		# Check binning ordening
-		for i, limit in enumerate(binning[1:]):
-			if limit > binning[i + 1]:
+		# Further checks for 1D binning
+		if 2D is not True:
+			# Check if binning is known
+			try:
+				assert binning[0] in self.DefaultBinning()
+			except AssertionError:
+				print("Don't know this binning {} ... \
+				Possibles are {}".format(self._binning[0], self.DefaultBinning()))
 				ok = False
+
+			# Check binning size
+			if (binning[0] == "PT" or binning[0] == "Y") and ok is True:
+				try:
+					assert len(binning[1:]) < 2
+				except AssertionError:
+					print("Not enought bins ({}), \
+					required at least 2".format(len(binning[1:])))
+					ok = False
+
+			# Check binning ordening
+			if ok is True:
+				for i, limit in enumerate(binning[1:]):
+					try:
+						assert limit < binning[i + 1]
+					except AssertionError:
+						print " --Binning not order properly"
+						ok = False
+		else:
+			# Check if binning is known
+			try:
+				assert binning[0][0] in ['PT', 'Y']
+			except AssertionError:
+				print("Don't know this binning {} ... \
+				Possibles are {}".format(self._binning[0][0], self.DefaultBinning()))
+				ok = False
+			try:
+				assert binning[1][0] in ['PT', 'Y']
+			except AssertionError:
+				print("Don't know this binning {} ... \
+				Possibles are {}".format(self._binning[1][0], self.DefaultBinning()))
+				ok = False
+
+			# Check binning size
+			if ok is True:
+				try:
+					assert len(binning[0][1:]) < 2
+				except AssertionError:
+					print("Not enought bins ({}), \
+					required at least 2".format(len(binning[0][1:])))
+					ok = False
+				try:
+					assert len(binning[!][1:]) < 2
+				except AssertionError:
+					print("Not enought bins ({}), \
+					required at least 2".format(len(binning[!][1:])))
+					ok = False
+
+			# Check binning ordening
+			if ok is True:
+				for i, limit in enumerate(binning[0][1:]):
+					try:
+						assert limit < binning[0][i + 1]
+					except AssertionError:
+						print " --- Binning not order properly"
+						ok = False
+				for i, limit in enumerate(binning[1][1:]):
+					try:
+						assert limit < binning[0][i + 1]
+					except AssertionError:
+						print " --- Binning not order properly"
+						ok = False
 
 		try:
 			assert ok is True
