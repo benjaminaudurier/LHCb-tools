@@ -42,7 +42,7 @@ class AnnaMuMuFitter:
 		}
 
 		# Adopt binning
-		self._binning = self.CheckBinning(binning)
+		self._binning, self._2D = self.CheckBinning(binning)
 		if not self._binning:
 			print "Binning is not good ..."
 			return
@@ -144,9 +144,9 @@ class AnnaMuMuFitter:
 			assert ok is True
 		except AssertionError:
 			print "Binning is wrong"
-			return None
+			return None, None
 
-		return binning
+		return binning, 2D
 		
 	# ______________________________________
 	def DefaultBinning(self):
@@ -169,8 +169,9 @@ class AnnaMuMuFitter:
 		Returns:
 			[type] -- [description]
 		"""
+
 		# Some needed stuffs
-		bintype = self._binning[0] 
+		bintype = self.GetBinType() 
 		added_result = 0
 
 		# The spectra that will be return
@@ -179,10 +180,10 @@ class AnnaMuMuFitter:
 			title=self._particle_name + "_" + bintype)
 
 		# Select the process according to bintype
-		if bintype == "PT" or bintype == "Y":
-
+		if self._2D is True:
 			# Loop over bin
-			for i in len(self._binning[1:]):
+			for i in len(self._binning[0][1:]):
+				for j in len(self._binning[1][1:])
 				# Counter
 				added_subresult = 0
 				# Set the bin limit
@@ -211,6 +212,12 @@ class AnnaMuMuFitter:
 			print("Unknown bin type {}".format(bintype))
 			return None
 
+	# ______________________________________
+	def GetBinType(self):
+		if self._2D: 
+			return str(self._binning[0][0]+'_'self._binning[1][0])
+		else:
+			return str(self._binning[0])
 	# ______________________________________
 	def GetHisto(self, tchain, bintype, bin_limits, leaf, centrality, cuts):
 		"""[summary]

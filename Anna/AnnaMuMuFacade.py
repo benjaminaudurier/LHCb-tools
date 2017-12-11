@@ -117,7 +117,7 @@ class AnnaMuMuFacade:
 
 		print " ================================================================ " 
 		print "        			FitParticle {} for \
-											binning {}".format(particle_name, binning[0]) 
+											binning {}".format(particle_name, binning) 
 		print " ================================================================ " 
 
 		config = self.Config()
