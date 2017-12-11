@@ -5,8 +5,6 @@
 
 from .AnnaMuMuSpectra import AnnaMuMuSpectra
 from .AnnaMuMuResult import AnnaMuMuResult
-from ROOT import TChain
-from ROOT import TH1F, TH2F
 
 class AnnaMuMuFitter:
 	"""helper class for fit process.
@@ -22,13 +20,12 @@ class AnnaMuMuFitter:
 		
 		Keyword Arguments:
 			particle {str} -- use for setting purposes (default: {""})
-			binning {list} -- the binning. By convention, binning[0] should
+			binning {list} -- the binning (or leaf name on which we apply cut). 
+							By convention, binning[0] should
 			contain the name of the binning. See AnnaMuMuFitter::DefaultBinning()
 			for the possible values (default: {[]})
 		"""
-		
-		# Default binning
-		default_binning = self.DefaultBinning()
+				
 		self._particle_name = particle		
 		# centrality percentage based on VELO cluster cut
 		self._centrality = {
@@ -49,12 +46,12 @@ class AnnaMuMuFitter:
 		
 	# ______________________________________
 	def CheckBinning(self, binning):
-		""" Check binning format"""
+		""" Check binning format"""		
 		
 		ok = True
-		2D = False
-
-		#Check size
+		is2D = False
+		
+		# Check size
 		try:
 			assert len(binning) > 2
 		except AssertionError:
@@ -64,78 +61,57 @@ class AnnaMuMuFitter:
 		# Check if 2D binning
 		if len(binning[0]) > 2:
 			if len(binning[1]) > 2:
-				print ' --- Fit with a 2D binning {}-{}'.format(binning[0][0],
-																binning[1][0])
-				2D = True
+				print ' --- Fit with a 2D binning {}-{}'.format
+				(
+					binning[0][0],
+					binning[1][0]
+				)
+				is2D = True
 
 		# Further checks for 1D binning
-		if 2D is not True:
-			# Check if binning is known
-			try:
-				assert binning[0] in self.DefaultBinning()
-			except AssertionError:
-				print("Don't know this binning {} ... \
-				Possibles are {}".format(self._binning[0], self.DefaultBinning()))
-				ok = False
-
+		if is2D is not True:
 			# Check binning size
-			if (binning[0] == "PT" or binning[0] == "Y") and ok is True:
-				try:
-					assert len(binning[1:]) < 2
-				except AssertionError:
-					print("Not enought bins ({}), \
-					required at least 2".format(len(binning[1:])))
-					ok = False
+			try:
+				assert len(binning[1:]) < 2
+			except AssertionError:
+				print("Not enought bins ({}), \
+				required at least 2".format(len(binning[1:])))
+				ok = False
 
 			# Check binning ordening
 			if ok is True:
-				for i, limit in enumerate(binning[1:]):
+				for i, limit in enumerate(binning[1:-2]):
 					try:
-						assert limit < binning[i + 1]
+						assert limit < binning[i + 1] 
 					except AssertionError:
 						print " --Binning not order properly"
 						ok = False
 		else:
-			# Check if binning is known
-			try:
-				assert binning[0][0] in ['PT', 'Y']
-			except AssertionError:
-				print("Don't know this binning {} ... \
-				Possibles are {}".format(self._binning[0][0], self.DefaultBinning()))
-				ok = False
-			try:
-				assert binning[1][0] in ['PT', 'Y']
-			except AssertionError:
-				print("Don't know this binning {} ... \
-				Possibles are {}".format(self._binning[1][0], self.DefaultBinning()))
-				ok = False
-
 			# Check binning size
-			if ok is True:
-				try:
-					assert len(binning[0][1:]) < 2
-				except AssertionError:
-					print("Not enought bins ({}), \
-					required at least 2".format(len(binning[0][1:])))
-					ok = False
-				try:
-					assert len(binning[!][1:]) < 2
-				except AssertionError:
-					print("Not enought bins ({}), \
-					required at least 2".format(len(binning[!][1:])))
-					ok = False
+			try:
+				assert len(binning[0][1:]) < 2
+			except AssertionError:
+				print("Not enought bins ({}), \
+				required at least 2".format(len(binning[0][1:])))
+				ok = False
+			try:
+				assert len(binning[1][1:]) < 2
+			except AssertionError:
+				print("Not enought bins ({}), \
+				required at least 2".format(len(binning[1][1:])))
+				ok = False
 
 			# Check binning ordening
 			if ok is True:
-				for i, limit in enumerate(binning[0][1:]):
+				for i, limit in enumerate(binning[0][1:-2]):
 					try:
 						assert limit < binning[0][i + 1]
 					except AssertionError:
 						print " --- Binning not order properly"
 						ok = False
-				for i, limit in enumerate(binning[1][1:]):
+				for i, limit in enumerate(binning[1][1:-2]):
 					try:
-						assert limit < binning[0][i + 1]
+						assert limit < binning[1][i + 1]
 					except AssertionError:
 						print " --- Binning not order properly"
 						ok = False
@@ -146,11 +122,30 @@ class AnnaMuMuFitter:
 			print "Binning is wrong"
 			return None, None
 
-		return binning, 2D
+		return binning, is2D
 		
 	# ______________________________________
-	def DefaultBinning(self):
-		return "INTEGRATED,PT,Y"
+	def ConfigureCuts(self, centrality, cut, bintype, bin_limits):
+
+		cut_update = cut		
+		if self._2D is True:
+			bin_names = bintype.split('--')
+			cut_update += " && {0}>{2} && {0}<{3} && {1}>{4} && {1}<{5}".format(
+				bin_names[0],
+				bin_names[1],
+				bin_limits[0],
+				bin_limits[1],
+				bin_limits[2],
+				bin_limits[3]
+			)
+		else:
+			cut_update += " && {0}>{2} && {0}<{3}".format(
+				bintype,
+				bin_limits[0],
+				bin_limits[1]
+			)
+
+		return cut_update
 
 	# ______________________________________
 	def Fit(self, tchain, leaf, centrality, cuts, fit_type, option):
@@ -182,42 +177,71 @@ class AnnaMuMuFitter:
 		# Select the process according to bintype
 		if self._2D is True:
 			# Loop over bin
-			for i in len(self._binning[0][1:]):
-				for j in len(self._binning[1][1:])
+			for i in len(self._binning[0][1:-2]):
+				for j in len(self._binning[1][1:-2]):
+					# Counter
+					added_subresult = 0
+					# Set the bin limit
+					bin_limits = [
+						self._binning[0][i],
+						self._binning[0][i + 1],
+						self._binning[1][j],
+						self._binning[1][j + 1]
+					]
+					# Get Histo
+					histo = self.GetHisto(
+						tchain, bintype, bin_limits,
+						leaf, centrality, cuts
+					)
+					# Construct our AnnaMuMuRestult for a given bin
+					annaresult = AnnaMuMuResult(
+						self._particle_name, histo,
+						bintype
+					)
+
+					# Loop over fit method and add fit
+					for fit in fit_type:
+						added_subresult += annaresult.AddFit(fit) 
+						print " ------ subresult = {}".format(added_subresult)
+					
+					added_result += spectra.AdoptResult(annaresult, bin_limits)
+					print " --- results in spectra = {}".format(added_result)
+		else:
+			for i in len(self._binning[1:-2]):
 				# Counter
 				added_subresult = 0
 				# Set the bin limit
-				bin_limits = [self._binning[i], self._binning[i + 1]]
+				bin_limits = [
+					self._binning[i],
+					self._binning[i + 1]
+				]
 				# Get Histo
 				histo = self.GetHisto(
 					tchain, bintype, bin_limits,
-					leaf, centrality, cuts)
+					leaf, centrality, cuts
+				)
 				# Construct our AnnaMuMuRestult for a given bin
 				annaresult = AnnaMuMuResult(
 					self._particle_name, histo,
-					bintype)
-
+					bintype
+				)
 				# Loop over fit method and add fit
 				for fit in fit_type:
 					added_subresult += annaresult.AddFit(fit) 
+					print " ------ subresult = {}".format(added_subresult)
 				
 				added_result += spectra.AdoptResult(annaresult, bin_limits)
+				print " --- results in spectra = {}".format(added_result)
 
-			return spectra
-
-		elif bintype == "INTEGRATED":
-			print "To be implemented"
-
-		else:
-			print("Unknown bin type {}".format(bintype))
-			return None
+		return spectra
 
 	# ______________________________________
 	def GetBinType(self):
 		if self._2D: 
-			return str(self._binning[0][0]+'_'self._binning[1][0])
+			return str(self._binning[0][0] + '--' + self._binning[1][0])
 		else:
 			return str(self._binning[0])
+
 	# ______________________________________
 	def GetHisto(self, tchain, bintype, bin_limits, leaf, centrality, cuts):
 		"""[summary]
@@ -240,8 +264,8 @@ class AnnaMuMuFitter:
 			print("Cannot find leaf {}".format(leaf))
 			return None
 
-		tchain.Draw("{}>>histo".format(leaf), cuts, "goff")
-
+		histo_cut = self.ConfigureCuts(centrality, cuts, bintype, bin_limits)
+		tchain.Draw("{}>>histo".format(leaf), histo_cut, "goff")
 		histo = tchain.GetHistogram()
 
 		try:
@@ -250,20 +274,7 @@ class AnnaMuMuFitter:
 			print("Cannot get histo from leaf {}".format(leaf))
 			return None
 
-		return histo
-
-
-
-		
-
-	# ______________________________________
-	def IntegratedPtRange(self):
-		return [0., 12.]
-
-	# ______________________________________
-	def IntegratedYRange(self):
-		return [-4., -2.5]
-
+		return histo		
 
 
 # =============================================================================

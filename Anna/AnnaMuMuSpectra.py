@@ -21,8 +21,9 @@ class AnnaMuMuSpectra(TNamed):
 		""" cstr """
 
 		TNamed.__init__(self, name, title)
-		self._binning = list()  		# the binning
-		self._results = TObjArray()  	# where are stored the AnnaMuMuResults
+		# self._binning = dict()  		# the binning (Note sure if list() is pyROOT storage proof)
+		# self._results = TObjArray()  	# where are stored the AnnaMuMuResults
+		self._results = dict()  	# where are stored the AnnaMuMuResults
 		self._weight = 1.0  			# results weights
 
 	# ______________________________________
@@ -33,13 +34,19 @@ class AnnaMuMuSpectra(TNamed):
 			print("Cannot adopt a null result or a non result")
 			return False
 
+		# ==== Version with TObjArray =====
 		# increment binning
-		self._binning.append(bin)
+		# self._binning.append(bin) 
 
-		sizeBeforeAdd = self._results.GetEntriesFast()
-		self._results.Add(result)  # Add the result to the recently added bin
-		sizeAfterAdd = self._results.GetEntriesFast()
-		
+		# sizeBeforeAdd = self._results.GetEntriesFast()
+		# self._results.Add(result)  # Add the result to the recently added bin
+		# sizeAfterAdd = self._results.GetEntriesFast()
+
+		# ==== Version with dict =====
+		sizeBeforeAdd = len(self._results)
+		self._results[str(bin)] = result  # Add the result to the recently added bin
+		sizeAfterAdd = len(self._results)
+			
 		if sizeBeforeAdd >= sizeAfterAdd:
 			print("Error adopting result {} to spectra {}".format(
 				result.GetName(), 
