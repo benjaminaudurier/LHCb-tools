@@ -5,6 +5,16 @@
 
 from .AnnaMuMuSpectra import AnnaMuMuSpectra
 from .AnnaMuMuResult import AnnaMuMuResult
+import ROOT
+# OSTAP modules
+# from Ostap.PyRoUts import *
+# import Ostap.FitModels as Models
+# Python modules
+from logging import debug as debug
+from logging import error as error
+from logging import warning as warning
+import copy
+
 
 class AnnaMuMuFitter:
 	"""helper class for fit process.
@@ -13,7 +23,7 @@ class AnnaMuMuFitter:
 	differently according to binning 
 	"""
 	# ______________________________________
-	def __init__(self, particle="", binning=[]):
+	def __init__(self, particle=None, binning=[]):
 		"""cstr
 		
 		[description]
@@ -26,7 +36,6 @@ class AnnaMuMuFitter:
 			for the possible values (default: {[]})
 		"""
 				
-		self._particle_name = particle		
 		# centrality percentage based on VELO cluster cut
 		self._centrality = {
 			"branch": ["VELOTHITS"], 
@@ -41,13 +50,45 @@ class AnnaMuMuFitter:
 		# Adopt binning
 		self._binning, self._2D = self.CheckBinning(binning)
 		if not self._binning:
-			print "Binning is not good ..."
-			return
+			print("Binning is not good ...")
+			return None
+
+		# several dictionnaries used for fit
+		# WHATCHOUT WHEN TOUCHING THIS !
+		self._fit_key = {
+			"Sig": "",
+			"Bck": "",
+			"Range": None,
+			"Rebin": None,
+			"Weight": None
+		}
+
+		self._mass_map = {
+			"JPsi": ROOT.RooRealVar('JPsi_mass', 'J/psi(1S) mass', 3.0, 3.2),
+			"PsiP": ROOT.RooRealVar('PsiP_mass', 'Psi(2S) mass', 3.6, 3.8),
+			"Upsilon": ROOT.RooRealVar('Upsilon_mass', 'Upsilon (1S) mass', 8.5, 10.5),
+			"UpsilonPrime": ROOT.RooRealVar('UpsilonPrime_mass', 'Upsilon (2S) mass', 9.0, 11.)
+		}
+
+		self._fit_attribute = None  # dict()
+
+		try:
+			assert particle in self._mass_map.keys()
+		except AssertionError:
+			error(
+				'Wrong entry for particle ({}),\
+				possibles are {}'.self._mass_map.keys()
+			)
+			return None
+
+		self._particle_name = particle 
 		
 	# ______________________________________
 	def CheckBinning(self, binning):
-		""" Check binning format"""		
-		
+		""" 
+		Check binning format
+		"""
+
 		ok = True
 		is2D = False
 		
@@ -55,97 +96,186 @@ class AnnaMuMuFitter:
 		try:
 			assert len(binning) > 2
 		except AssertionError:
-			print "binning is too small"
+			print("binning is too small")
 			ok = False
 
 		# Check if 2D binning
-		if len(binning[0]) > 2:
-			if len(binning[1]) > 2:
-				print ' --- Fit with a 2D binning {}-{}'.format
-				(
-					binning[0][0],
-					binning[1][0]
+		if type(binning[0]) == list():
+			try:
+				assert type(binning[1]) == list()
+			except AssertionError:
+				error(
+					" --- Wrong bin format ({}),\
+					should be list()".format(type(binning[1]))
 				)
-				is2D = True
+				return False
+
+			print(' --- Fit with a 2D binning {}-{}'.format)
+			(
+				binning[0][0],
+				binning[1][0]
+			)
+			is2D = True
 
 		# Further checks for 1D binning
-		if is2D is not True:
+		if is2D is False:
 			# Check binning size
 			try:
-				assert len(binning[1:]) < 2
+				assert len(binning[1:]) > 2
 			except AssertionError:
-				print("Not enought bins ({}), \
+				error("Not enought bins ({}),\
 				required at least 2".format(len(binning[1:])))
 				ok = False
 
 			# Check binning ordening
 			if ok is True:
-				for i, limit in enumerate(binning[1:-2]):
+				for i, limit in enumerate(binning[1:-1]):
 					try:
-						assert limit < binning[i + 1] 
+						assert limit < binning[i+2] 
 					except AssertionError:
-						print " --Binning not order properly"
+						error(" Binning {} not order properly".format())
 						ok = False
 		else:
 			# Check binning size
 			try:
-				assert len(binning[0][1:]) < 2
+				assert len(binning[0][1:]) > 2
 			except AssertionError:
-				print("Not enought bins ({}), \
+				error("Not enought bins ({}), \
 				required at least 2".format(len(binning[0][1:])))
 				ok = False
 			try:
-				assert len(binning[1][1:]) < 2
+				assert len(binning[1][1:]) > 2
 			except AssertionError:
-				print("Not enought bins ({}), \
+				error("Not enought bins ({}), \
 				required at least 2".format(len(binning[1][1:])))
 				ok = False
 
 			# Check binning ordening
 			if ok is True:
-				for i, limit in enumerate(binning[0][1:-2]):
+				for i, limit in enumerate(binning[0][1:-1]):
 					try:
-						assert limit < binning[0][i + 1]
+						assert limit < binning[0][i + 2]
 					except AssertionError:
-						print " --- Binning not order properly"
+						error(" Binning {} not order properly".format())
 						ok = False
-				for i, limit in enumerate(binning[1][1:-2]):
+				for i, limit in enumerate(binning[1][1:-1]):
 					try:
-						assert limit < binning[1][i + 1]
+						assert limit < binning[1][i + 2]
 					except AssertionError:
-						print " --- Binning not order properly"
+						error(" Binning {} not order properly".format())
 						ok = False
 
 		try:
 			assert ok is True
 		except AssertionError:
-			print "Binning is wrong"
+			error("Binning is wrong")
 			return None, None
 
+		debug("Binning is correct")
 		return binning, is2D
-		
+
 	# ______________________________________
 	def ConfigureCuts(self, centrality, cut, bintype, bin_limits):
 
-		cut_update = cut		
+		cut_update = str()		
+
 		if self._2D is True:
 			bin_names = bintype.split('--')
-			cut_update += " && {0}>{2} && {0}<{3} && {1}>{4} && {1}<{5}".format(
+			cut_update = "{2} < {0} && {0} < {3} && {4} < {1} && {1} < {5}".format(
 				bin_names[0],
 				bin_names[1],
 				bin_limits[0],
 				bin_limits[1],
 				bin_limits[2],
 				bin_limits[3]
-			)
+			) 
 		else:
-			cut_update += " && {0}>{2} && {0}<{3}".format(
+			cut_update = "{1} < {0} && {0} < {2}".format(
 				bintype,
 				bin_limits[0],
 				bin_limits[1]
 			)
 
+		add_centrality = True
+		try:
+			self._centrality[centrality]
+		except KeyError:
+			add_centrality = False
+			warning("ConfigureCuts: skip centrality cut ({})".format(centrality))
+
+		add_cut = True
+		try:
+			assert cut != "#"
+		except AssertionError:
+			warning("ConfigureCuts: skip specific cut ({})".format(centrality))
+			add_cut = False
+
+		if add_centrality is True:
+			cut_update += " && {0}>{1} && {0}<{2}".format(
+				self._centrality["branch"],
+				self._centrality[centrality][0],
+				self._centrality[centrality][1]
+			) 
+		if add_cut is True:
+			cut_update += " && {0}".format(cut) 
 		return cut_update
+
+	# ______________________________________
+	def DecodeFitType(self, fit_type):
+		"""
+		decode the string containing all the information for the fit to be done
+		
+		the fit_type is a combination of key=value pairs separated by ":".
+		Default keys are available in self._key_value
+
+		e.g.
+		Func=gaus:rebin=2:range=2.3;4.7
+		Func=vwm+cb2:range=2;5:alphalow=5.2:alphahigh=6.2
+		
+		except from the Func key, all the other ones have default values
+		if the key is different from standard key value it is assumed
+		to be the value for a parameter of the fit function.
+		"""
+
+		# Always reset the data member at each fittype
+		self._fit_attribute = dict()
+		self._fit_key["Range"] = [2., 5.],
+		self._fit_key["Rebin"] = 1,
+		self._fit_key["Weight"] = 1
+
+		if fit_type.count("Sig") != 1 or fit_type.count("Bck") != 1:
+			error("Cannot decode type. Expecting 1 entries \
+			with 'Sig' and 'Bck, found {} and {}".format(
+				fit_type.count("Sig"),
+				fit_type.count("Bck")
+			))
+			return False
+
+		# Check that keys appear only once in the string
+		for x in self._fit_key.keys():
+			try:
+				assert fit_type.count(x) < 2 
+			except AssertionError:
+				error(" Oups ! Multiple entries for {}, please fix it !".format(x))
+				return False
+
+		# Fill self._fit_key and self._fit_attribute
+		pairs = fit_type.split("|")
+		for pair in pairs:
+			key, value = self.GetKeyValue(pair, '=')
+
+			try:
+				assert key is not None or value is not None
+			except AssertionError:
+				print('Error : Invalid key=value pair ' + pair)
+			debug("key = %s, value = %s".format(key, value))
+
+			if key in self._fit_key.keys():
+				self._fit_key[key] = value
+			else:
+				self._fit_attribute[key] = value
+		
+		return True
 
 	# ______________________________________
 	def Fit(self, tchain, leaf, centrality, cuts, fit_type, option):
@@ -165,75 +295,104 @@ class AnnaMuMuFitter:
 			[type] -- [description]
 		"""
 
+		# TODO : since fit can be apply on histo list, 
+		# rewrite to get a list of histos 
+
 		# Some needed stuffs
-		bintype = self.GetBinType() 
 		added_result = 0
+		added_subresult = []
 
 		# The spectra that will be return
 		spectra = AnnaMuMuSpectra(
-			name=self._particle_name + "_" + bintype,
-			title=self._particle_name + "_" + bintype)
+			name=self._particle_name + "_" + self.GetBinType(),
+			title=self._particle_name + "_" + self.GetBinType())
 
-		# Select the process according to bintype
-		if self._2D is True:
-			# Loop over bin
-			for i in len(self._binning[0][1:-2]):
-				for j in len(self._binning[1][1:-2]):
-					# Counter
-					added_subresult = 0
-					# Set the bin limit
-					bin_limits = [
-						self._binning[0][i],
-						self._binning[0][i + 1],
-						self._binning[1][j],
-						self._binning[1][j + 1]
-					]
-					# Get Histo
-					histo = self.GetHisto(
-						tchain, bintype, bin_limits,
-						leaf, centrality, cuts
-					)
-					# Construct our AnnaMuMuRestult for a given bin
-					annaresult = AnnaMuMuResult(
-						self._particle_name, histo,
-						bintype
-					)
+		print('try to get histos ...')
+		histos = self.GetHistos(tchain, leaf, centrality, cuts)
 
-					# Loop over fit method and add fit
-					for fit in fit_type:
-						added_subresult += annaresult.AddFit(fit) 
-						print " ------ subresult = {}".format(added_subresult)
-					
-					added_result += spectra.AdoptResult(annaresult, bin_limits)
-					print " --- results in spectra = {}".format(added_result)
-		else:
-			for i in len(self._binning[1:-2]):
-				# Counter
-				added_subresult = 0
-				# Set the bin limit
-				bin_limits = [
-					self._binning[i],
-					self._binning[i + 1]
-				]
-				# Get Histo
-				histo = self.GetHisto(
-					tchain, bintype, bin_limits,
-					leaf, centrality, cuts
-				)
-				# Construct our AnnaMuMuRestult for a given bin
-				annaresult = AnnaMuMuResult(
-					self._particle_name, histo,
-					bintype
-				)
-				# Loop over fit method and add fit
-				for fit in fit_type:
-					added_subresult += annaresult.AddFit(fit) 
-					print " ------ subresult = {}".format(added_subresult)
-				
-				added_result += spectra.AdoptResult(annaresult, bin_limits)
-				print " --- results in spectra = {}".format(added_result)
+		print(histos)
+		return None
+
+		# Construct our AnnaMuMuRestult for each histo or bins
+		annaresults = [
+			AnnaMuMuResult(self._particle_name, self.GetBinType()) 
+			for i in len(histos)
+		]
+		
+		for annaresult in annaresults:
+			for histo in histos:
+				added_subresult = [annaresult.AddFit(subresults) for subresults in self.FitHisto(fit_type, histo)]
+			print(
+				' ------ number of subresults fitted for {} : ()'
+				.format(annaresult.GetName(), added_subresult.count(1))
+			)
+			added_result += spectra.AdoptResult(annaresult, annaresult._binning)
+			
+		print(
+			'number of results added for {} : ()'
+			.format(spectra.GetName(), added_result)
+		)
 
 		return spectra
+
+	# ______________________________________
+	def FitHisto(self, fit_methods, histo):
+		"""Fit Histograme
+		
+		The result is stored in a AnnaMuMuResult
+		
+		Arguments:
+			fitmethod {[type]} -- fit configuration string
+			histo {[type]} -- histo to be fitted
+		"""
+
+		print("Coucou from FitHisto()")
+		return None
+
+		# try:
+		# 	assert histo is not None
+		# except AssertionError:
+		# 	error("Cannot get histo")
+		# 	return None
+
+		# subresult_list = list()
+
+		# for fit_method in fit_methods:
+		# 	self.DecodeFitType(fit_method)
+
+		# 	# try to get the fit functions from Ostap
+		# 	try:
+		# 		signal = getattr(Models, self._fit_key['Sig'] + "_pdf")
+		# 	except AttributeError:
+		# 		error(
+		# 			'Cannot find {} in Ostap.FitModels\
+		# 			for signal function'.format(self._fit_key['Sig'])
+		# 		)
+		# 	try:
+		# 		background = getattr(Models, self._fit_key['Bck'] + "_pdf")
+		# 	except AttributeError:
+		# 		error(
+		# 			'Cannot find {} in Ostap.FitModels\
+		# 			for background function'.format(self._fit_key['Bck'])
+		# 		)
+
+		# 	# Configure functions
+		# 	signal.name = 'sig'
+		# 	signal.mn = self._mass_map[self._particle_name].getMin()
+		# 	signal.mx = self._mass_map[self._particle_name].getMax()
+		# 	signal.mass = self._mass_map[self._particle_name]
+
+		# 	background.name = 'Bck'
+		# 	signal.mass = self._mass_map[self._particle_name]
+
+		# 	self.SetAdditionalAttributeToFunction(signal, background) #TODO: To write
+
+		# 	model = Models.Fit1D(
+		# 		signal=signal,
+		# 		background=background
+		# 	)
+
+		# 	r, f = model_cb.fitTo(histo)
 
 	# ______________________________________
 	def GetBinType(self):
@@ -243,7 +402,7 @@ class AnnaMuMuFitter:
 			return str(self._binning[0])
 
 	# ______________________________________
-	def GetHisto(self, tchain, bintype, bin_limits, leaf, centrality, cuts):
+	def GetHistos(self, tchain, leaf, centrality, cuts):
 		"""[summary]
 		
 		[description]
@@ -255,26 +414,73 @@ class AnnaMuMuFitter:
 			centrality {[type]} -- [description]
 			cuts {[type]} -- [description]
 		"""
-	
-		ok_leaf = self.CheckLeafName(tchain, leaf)
 
+		histo_list = list()
+		bin_all = list()
+		bintype = self.GetBinType() 
+
+		# Select the process according to bintype
+		if self._2D is True:
+			# Loop over bin (Super sick from a former c++ programer :O )
+			bin_all = [ 
+				[
+					self._binning[0][i], self._binning[0][i + 1], 
+					self._binning[1][j], self._binning[1][j + 1]
+				] 
+				for i in range(1, len(self._binning[0][1:]))
+				for j in range(1, len(self._binning[1][1:]))
+			]
+		else:
+			bin_all = [
+				[
+					self._binning[i], self._binning[i + 1]
+				] 
+				for i in range(1, len(self._binning[1:]))
+			]
+
+		# Check if leaf exist
 		try:
-			assert ok_leaf is True
+			assert tchain.GetLeaf(leaf) != None
 		except AssertionError:
-			print("Cannot find leaf {}".format(leaf))
+			error("GetHistos: cannot find leaf {}".format(leaf))
 			return None
 
-		histo_cut = self.ConfigureCuts(centrality, cuts, bintype, bin_limits)
-		tchain.Draw("{}>>histo".format(leaf), histo_cut, "goff")
-		histo = tchain.GetHistogram()
+		# This is just sick ...
+		histo_cuts = [ 
+			self.ConfigureCuts(centrality, cuts, bintype, bin_limits)
+			for bin_limits in bin_all
+		]
 
-		try:
-			assert histo is not None
-		except AssertionError:
-			print("Cannot get histo from leaf {}".format(leaf))
-			return None
+		print(histo_cuts)
 
-		return histo		
+		for i, histo_cut in enumerate(histo_cuts):
+			print(' --- Getting histo from leaf {} with cut {}'.format(leaf, histo_cut))
+			command = '{}>>histo'.format(leaf)
+			tchain.Draw(command, histo_cut, "goff")
+
+			try:
+				assert ROOT.gDirectory.Get("histo") != None
+			except AssertionError:
+				error("GetHistos: cannot get histo from leaf {} ... continue".format(leaf))
+				continue
+
+			try:
+				histo_list.append(ROOT.gDirectory.Get("histo").Clone())
+			except ReferenceError:
+				error("GetHistos: could not get histo with cut {}".format(histo_cut))
+				continue
+
+		return histo_list
+
+	# ______________________________________
+	def GetKeyValue(self, pair, separator):
+
+		if pair.count(separator) != 1:
+			return None, None
+
+		split_pair = pair.strip()
+		split_pair = split_pair.split(separator)
+		return split_pair[0], split_pair[1]		
 
 
 # =============================================================================

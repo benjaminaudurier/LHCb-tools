@@ -32,7 +32,7 @@ class AnnaMuMuSpectra(TNamed):
 
 		if not result or type(result) != type(AnnaMuMuResult):
 			print("Cannot adopt a null result or a non result")
-			return False
+			return 0
 
 		# ==== Version with TObjArray =====
 		# increment binning
@@ -51,12 +51,12 @@ class AnnaMuMuSpectra(TNamed):
 			print("Error adopting result {} to spectra {}".format(
 				result.GetName(), 
 				self._name))
-			return False
+			return 0
 		
 		else: 
-			return True
+			print("Hello from AdoptResult")
+			return 1
 
-		print "Hello from AdoptResult"
 
 # =============================================================================
 # The END 

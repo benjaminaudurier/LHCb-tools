@@ -3,30 +3,44 @@
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
 
-from ROOT import TObject, TObjArray, TList, TObjString, TMath
+from ROOT import TNamed, TObject, TObjArray, TList, TObjString, TMath
 import math
-from enum import Enum
-import logging.debug as debug
+import copy
+from enum import Enum  # not python2.7 package ...
+from logging import debug
 
-class AnnaMuMuResult(TObject):
-	"""[summary]
+
+class AnnaMuMuResult(TNamed):
+	"""Store results Anna framework
 	
-	[description]
+	Base class to hold a set of results for the same quantity,
+	computed using various methods, each with their errors.
+	A AnnaMuMuResult can hold other AnnaMuMuResult, refered as
+	sub-results later.
 	
 	Extends:
-		TObject
+		TNamed
 	"""
 
 	# ______________________________________
-	def __init__(self, name, title):
-		self._name = name
-		self._title = title
+	def __init__(self, name, title, histo=None):
+		""" cstr"""
+
+		# General for all AnnaMuMuResult
+		TNamed.__init__(name=name, title=title)
 		self._subresults = None  # dict()
-		self._subresults_to_be_incuded = None  # dict()
-		self._map = None
-		self._index = Enum('kValue', 'kStat', 'kSys')
-		self._mergingMethod = Enum('kMean', 'kSum')
+		self._subresults_to_be_incuded = None  # list()
+		
+		# How to merge quantity for subresults 
+		self._mergingMethod = Enum('kMean', 'kSum')  
 		self._resultMergingMethod = self._mergingMethod('kMean')
+		
+		# Will be define only if self is a sub-result
+		self._binning = None
+		self._histo = histo
+		self._index = Enum('kValue', 'kStat', 'kSys')  # not working !
+		self._map = None
+		self._weigth = 1.
 
 	# ______________________________________
 	def AdoptSubResult(self, r):
@@ -79,13 +93,13 @@ class AnnaMuMuResult(TObject):
 		return math.sqrt(e)
 
 	# ______________________________________
-	def Exclude(self, subResultList):
+	def Exclude(self, sub_result_list):
 		""" 
 			exclude some subresult names from the list of subresult
 			to be used when computing the mean 
 		"""
 
-		slist = subResultList
+		slist = sub_result_list
 
 		to_be_excluded = self.GetSubResultNameList()
 
@@ -100,34 +114,32 @@ class AnnaMuMuResult(TObject):
 				self.DeleteEntry(a)
 	
 	# ______________________________________
-	def GetErrorStat(self, name, subResultName):
-
+	def GetErrorStat(self, name, sub_result_name):
 		"""    
 		compute the mean error value from all subresults that are included
-		return imaginary if any problem
-		
+		return None if any problem
 		"""
 
 		# If we specify a subresults
-		if len(subResultName) > 0:
+		if len(sub_result_name) > 0:
 
 			if not self._subresult:
 
-				print "No subresult from which \
-						I could get the {} one...".format(subResultName)
-				return 1j
+				print("No subresult from which \
+						I could get the {} one...".format(sub_result_name))
+				return None
 
-			sub = self._subresult[subResultName]
+			sub = self._subresult[sub_result_name]
 			if not sub:
-				print "No subresult from which \
-						I could get the {} one...".format(subResultName)
-				return 1j
+				print("No subresult from which \
+						I could get the {} one...".format(sub_result_name))
+				return None
 
 			return sub.GetErrorStat(name)
 
 		# self._map existes only for AnnaMuMuResults w/o subresults
 		if self._map is not None:
-			error_stat = self._map(self._index('kStat'))
+			error_stat = self._map[name][self._index('kStat')]
 			return error_stat
 
 		# Mean method (by default)
@@ -143,9 +155,12 @@ class AnnaMuMuResult(TObject):
 					"""
 
 					# Check fit status
-					fitStatus = r.HasValue("FitResult") if r.GetValue("FitResult") else 0
-					covStatus = r.HasValue("CovMatrixStatus") if r.GetValue("CovMatrixStatus") else 3
-					chi2 = r.HasValue("FitChi2PerNDF") if r.GetValue("FitChi2PerNDF") else 1
+					fitStatus = r.HasValue("FitResult") \
+						if r.GetValue("FitResult") is not None else 0
+					covStatus = r.HasValue("CovMatrixStatus") \
+						if r.GetValue("CovMatrixStatus") is not None else 3
+					chi2 = r.HasValue("FitChi2PerNDF") \
+						if r.GetValue("FitChi2PerNDF") is not None else 1
 
 					# Select only Fit that converge
 					if (fitStatus != 0 and fitStatus != 4000) or chi2 > 2.5:
@@ -173,7 +188,7 @@ class AnnaMuMuResult(TObject):
 			try:
 				assert n > 1
 			except AssertionError:
-				return 1j
+				return None
 			# case we have one single results
 			if n == 1:
 				for r in self._subresults:
@@ -194,36 +209,35 @@ class AnnaMuMuResult(TObject):
 			if n > 0:
 				return sm * math.sqrt(sme2)
 			else:
-				return 1j
+				return None
 
 	# ______________________________________
-	def GetRMS(self, name, subResultName):
-
+	def GetRMS(self, name, sub_result_name):
 		"""
 			compute the rms of the subresults
-			returns zero if no subresults
+			returns wero if no subresults
 		"""
 
 		# If we specify a subresults
-		if len(subResultName) > 0:
+		if len(sub_result_name) > 0:
 
 			if not self._subresult:
 
-				print "No subresult from which \
-						I could get the {} one...".format(subResultName)
+				print("No subresult from which \
+						I could get the {} one...".format(sub_result_name))
 				return 0
 
-			sub = self._subresult[subResultName]
+			sub = self._subresult[sub_result_name]
 			if not sub:
-				print "No subresult from which \
-						I could get the {} one...".format(subResultName)
+				print("No subresult from which \
+						I could get the {} one...".format(sub_result_name))
 				return 0
 
 			return sub.GetRMS(name)
 
 		# self._map existes only for AnnaMuMuResults w/o subresults
 		if self._map is not None:
-			error_sys = self._map(self._index('kSys'))
+			error_sys = self._map[name][self._index('kSys')]
 			return error_sys if error_sys is not None else 0.0
 
 		v1, v2, sm = 0., 0., 0.
@@ -245,17 +259,21 @@ class AnnaMuMuResult(TObject):
 				"""
 
 				# Check fit status
-				fitStatus = r.HasValue("FitResult") if r.GetValue("FitResult") else 0
-				covStatus = r.HasValue("CovMatrixStatus") if r.GetValue("CovMatrixStatus") else 3
-				chi2 = r.HasValue("FitChi2PerNDF") if r.GetValue("FitChi2PerNDF") else 1
+				fitStatus = r.HasValue("FitResult") \
+					if r.GetValue("FitResult") is not None else 0
+				covStatus = r.HasValue("CovMatrixStatus") \
+					if r.GetValue("CovMatrixStatus") is not None else 3
+				chi2 = r.HasValue("FitChi2PerNDF") \
+					if r.GetValue("FitChi2PerNDF") is not None else 1
 
 				# Select only Fit that converge
 				if (fitStatus != 0 and fitStatus != 4000) or chi2 > 2.5:
 					debug("Fit {} excluded (FitResult = {} | Cov. Mat. = {})\n".format(
-						r.GetName(), fitStatus, covStatus)
+						r.GetName(),
+						fitStatus,
+						covStatus)
 					)
 					continue
-				
 
 				wi = r.Weight()
 				v1 += wi
@@ -276,16 +294,16 @@ class AnnaMuMuResult(TObject):
 					return r.GetRMS(name)			
 
 		unbiased = math.sqrt((v1 / (v1 * v1 - v2)) * sm)
-
 		biased = math.sqrt(sm / v1)
-
-		debug(" ----> v1 {} v1*v1 {} v2 {} -> biased {} unbiased {} (ratio {}) \n".format(
-			v1,
-			v1 * v1,
-			v2,
-			biased,
-			unbiased,
-			unbiased / biased)
+		debug(
+			" ----> v1 {} v1*v1 {} v2 {} -> biased {} unbiased {} (ratio {}) \n".format(
+				v1,
+				v1 * v1,
+				v2,
+				biased,
+				unbiased,
+				unbiased / biased
+			)
 		)
 
 		return unbiased
@@ -306,33 +324,32 @@ class AnnaMuMuResult(TObject):
 		return subresult_name_list
 
 	# ______________________________________
-	def GetValue(self, name, subResultName):
-
+	def GetValue(self, name, sub_result_name):
 		"""    
 		get a value (either directly or by computing the mean of the subresults)
-		return imaginary if any problem
+		return None if any problem
 		"""
 
 		# If we specify a subresults
-		if len(subResultName) > 0:
+		if len(sub_result_name) > 0:
 
 			if not self._subresult:
-				print "No subresult from which \
-						I could get the {} one...".format(subResultName)
-				return 1j
+				print("No subresult from which \
+						I could get the {} one...".format(sub_result_name))
+				return None
 
-			sub = self._subresult[subResultName]
+			sub = self._subresult[sub_result_name]
 
 			if not sub:
-				print "No subresult from which \
-						I could get the {} one...".format(subResultName)
-				return 1j
+				print("No subresult from which \
+						I could get the {} one...".format(sub_result_name))
+				return None
 
 			return sub.GetValue(name)
 
 		# self._map existes only for AnnaMuMuResults w/o subresults
 		if self._map is not None:
-			value = self._map(self._index('kValue'))
+			value = self._map[name][self._index('kValue')]
 			return value
 
 		# Mean method (by default)
@@ -350,14 +367,18 @@ class AnnaMuMuResult(TObject):
 						e = r.GetErrorStat(name)/math.sqrt(r.GetValue(name))
 
 					The math.sqrt(r>GetValue(name)) was not there before and was introduced 
-					to remove the dependence of the error with the Number of particule extracted 
-					(valid only for counts results with different data samples and not for <pt>...)
+					to remove the dependence of the error with the number of particule 
+					extracted (valid only for counts results with different data samples 
+					and not for <pt>...)
 					"""
 
-					# Check fi status
-					fitStatus = r.HasValue("FitResult") if r.GetValue("FitResult") else 0
-					covStatus = r.HasValue("CovMatrixStatus") if r.GetValue("CovMatrixStatus") else 3
-					chi2 = r.HasValue("FitChi2PerNDF") if r.GetValue("FitChi2PerNDF") else 1
+					# Check fit status
+					fitStatus = r.HasValue("FitResult") \
+						if r.GetValue("FitResult") > 0 else 0
+					covStatus = r.HasValue("CovMatrixStatus") \
+						if r.GetValue("CovMatrixStatus") > 0 else 3
+					chi2 = r.HasValue("FitChi2PerNDF") \
+						if r.GetValue("FitChi2PerNDF") > 0 else 1
 
 					# Select only Fit that converge
 					if (fitStatus != 0 and fitStatus != 4000) or chi2 > 2.5:
@@ -379,7 +400,7 @@ class AnnaMuMuResult(TObject):
 			try:
 				assert sm != 0.
 			except AssertionError:
-				return 1j
+				return None
 
 			return mean / sm
 
@@ -393,9 +414,66 @@ class AnnaMuMuResult(TObject):
 			try:
 				assert sm != 0.
 			except AssertionError:
-				return 1j
+				return None
 
 			return sm
+
+	# ______________________________________
+	def HasValue(self, name, sub_result_name):
+		"""
+			Whether this result (or subresult if sub_result_name is provided) 
+			has a property named "name"
+			When having subresults, return the number of subresults that have this value
+		"""
+		if len(sub_result_name) > 0:
+			if self._subresults is None:
+				print("Error : No subresults from which \
+				I could get the {} one...".format(sub_result_name))
+				return False
+		
+		try:
+			sub = self._subresults[sub_result_name]
+		except KeyError:
+			print("Error : Could not get subresult named " + sub_result_name)
+			return False
+
+		return sub.HasValue(name)
+
+		# No _subresults if results contains subresults
+		if self._subresults is not None:
+			try:
+				self._subresults[sub_result_name]
+			except KeyError:
+				print("Error : Could not get subresult named " + sub_result_name + " from map")
+				return False
+			return True
+
+		n = 0
+		for r in self._subresults:			 
+			if r.HasValue(name) is True: 
+				n += 1
+
+		return n
+
+	# ______________________________________
+	def Include(self, sub_result_list):
+		"""
+		(re)include some subresult names
+		"""
+		if len(sub_result_list) == 0:
+			self.Exclude("*")
+			return
+
+		if sub_result_list == '*':
+			sub_result_list = self.GetSubResultNameList()
+
+		a = sub_result_list.split(',')
+		for s in a:
+			if self._subresults_to_be_incuded is None:
+				self._subresults_to_be_incuded = list()
+
+			if self.IsIncluded(s) is False:
+				self._subresults_to_be_incuded.append(s)
 
 	# ______________________________________
 	def IsIncluded(self, alias):
@@ -403,19 +481,187 @@ class AnnaMuMuResult(TObject):
 		whether that subresult alias should be included when computing means, etc...
 		"""
 
-		if self._subresults_to_be_incuded is not None: 
+		if self._subresults_to_be_incuded is None: 
 			return True
-
+		
 		try:
-			self._subresults_to_be_incuded[alias]
-		except KeyError:
+			assert self._subresults_to_be_incuded.count(alias) == 1
+		except AssertionError:
 			return False
 		
 		return True
 
 	# ______________________________________
+	def Print(self, opt):
+		"""
+		printout
+		"""	
+		option = opt
+		for x in range(0, 9): 
+			option = option.replace(str(x), '')
+		poption = option
+		poption.replace("ALL", '')
+		poption.replace("FULL", '')
+
+		print(poption + " ")
+
+		print("{} {} {}".format(
+			self.GetName(),
+			self.GetTitle(),
+			" WEIGHT {}".format(self._weigth)) if self._weigth > 0.0 else "" 
+		)
+
+		if self._subresults is not None and len(self._subresults) > 1:
+			print(" (" + len(self._subresults) + " subresults)")
+
+		print("")
+
+		nsub = len(self._subresults) if self._subresults is not None else 0
+		if self._map is not None:
+			for key in self._map.keys():
+				if nsub == 0 or nsub == self.HasValue(key):
+					self.PrintValue(
+						key,
+						poption,
+						self.GetValue(key),
+						self.GetErrorStat(key),
+						self.GetRMS
+					) 
+
+		if self._subresults is not None and \
+			(option.count('ALL') > 1 or option.count('FULL') > 1):
+			
+			print(poption + '\t===== sub results ===== ')
+			option += "\t\t"
+
+			for r in self._subresults:
+				if self.IsIncluded(r.GetName()) is False:
+					print(" [EXCLUDED]")
+				r.Print(option)
+
+	# ______________________________________
+	def PrintValue(self, key, opt, value, errorStat, rms):
+		""" 
+		print one value and its associated error
+		"""
+
+		if key.count('AccEff') > 1:
+			print(opt + "\t\t%20s %9.2f +- %5.2f %% (%5.2f %%)".format(
+				key,
+				value * 100,
+				errorStat * 100,
+				errorStat * 100.0 / value if value != 0.0 else 0.0)
+			)
+
+			if rms is not None:
+				print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
+			print("")
+
+		elif key.count('Sigma') > 1 or key.count('Mean') > 1:
+			print(opt + "\t\t%20s %9.2f +- %5.2f (%5.2f %%) MeV/c^2".format(
+				key,
+				value * 1E3,
+				1E3 * errorStat,
+				errorStat * 100.0 / value if value != 0.0 else 0.0)
+			)
+
+			if rms is not None:
+				print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
+			print("")
+
+		elif key.count('Nof') > 1:
+			print(opt + "\t\t%20s %9.3f +- %5.3f (%5.3f %%) MeV/c^2".format(
+				key,
+				value * 1E3,
+				1E3 * errorStat,
+				errorStat * 100.0 / value if value != 0.0 else 0.0)
+			)
+
+			if rms is not None:
+				print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
+			print("")
+
+		elif value > 1E-3 and value < 1E3:
+			if errorStat > 0.0:
+				print(opt + "\t\t%20s %9.3f +- %5.3f (%5.3f %%) MeV/c^2".format(
+					key,
+					value * 1E3,
+					1E3 * errorStat,
+					errorStat * 100.0 / value if value != 0.0 else 0.0)
+				)
+
+				if rms is not None:
+					print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
+
+			else:
+				print(opt + "\t\t%20s %9.3f".format(key, value))
+			print("")
+
+		else:
+			if errorStat > 0.0:
+				print(opt + "\t\t%20s %9.2e +- %5.2e (%5.2f %%) MeV/c^2".format(
+					key,
+					value * 1E3,
+					1E3 * errorStat,
+					errorStat * 100.0 / value if value != 0.0 else 0.0)
+				)
+
+				if rms is not None:
+					print(" RMS %9.2e (%5.2f %%)".format(rms, 100.0 * rms / value))
+
+			else:
+				print(opt + "\t\t%20s %9.2e".format(key, value))
+			print("")
+
+	# ______________________________________
+	def Scale(self, w):
+		"""
+		scale all our internal values by w
+		"""
+		for key in self._map.keys():
+			value = self.GetValue(key)
+			error = self.GetErrorStat(key)
+			rms = self.GetRMS(key)
+
+			self.Set(key, value * w, error * w, rms * w)
+
+	# ______________________________________
+	def Set(self, name, value, errorStat, rms):
+		""" 
+		Set a (value,error) pair with a given name
+		"""
+		if self._map is None: 
+			self._map = dict()
+		try:
+			p = self._map[name]
+		except NameError:
+			p = [value, errorStat, rms]
+			self._map[name] = p
+
+		p[self._index('kValue')] = value
+		p[self._index('kErrorStat')] = errorStat
+		p[self._index('kRMS')] = rms
+
+	# ______________________________________
+	def SubResult(self, sub_result_name):
+		"""
+		get a given subresult
+		"""
+		if self._subresults is None: 
+			return None
+		
+		for r in self._subresults:
+			if r.GetName() == sub_result_name: 
+				return r
+
+		return None
+
+	# ______________________________________
 	def SubResultsToBeIncluded(self):
 		if self._subresults_to_be_incuded is None:
-			self._subresults_to_be_incuded = dict()
+			self._subresults_to_be_incuded = list()
 		return self._subresults_to_be_incuded
 
+# =============================================================================
+# The END 
+# =============================================================================	 

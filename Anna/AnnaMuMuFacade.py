@@ -5,6 +5,10 @@
 from .AnnaMuMuConfig import AnnaMuMuConfig
 from .AnnaMuMuFitter import AnnaMuMuFitter
 from .AnnaMuMuSpectra import AnnaMuMuSpectra
+from logging import debug as debug
+from logging import error as error
+from logging import warning as warning
+from logging import info as info
 from ROOT import TChain, TFile
 import copy
 import os.path
@@ -21,13 +25,13 @@ class AnnaMuMuFacade:
 		- tchain : A first TChain object containing the data.
 		
 		- tchain2 : A second TChain object, not medatory, but usefull 
-					in MC studies for instance.
+					in MC studies for instance (To be implemented).
 
-		- configfile : read by AnnaConfig to configure 
+		- configfile : read by AnnaMuMuConfig to configure 
 						our object (See AnnaConfig for details)
 
 	As a facade, each functions call a dedicade class inside the framework when 
-	running the task (exp: fit, print diagrams ... ).
+	running the task (exp: fit, print(diagrams ... ).
 	See the classes and functions documentations for more details.
 	"""
 
@@ -35,25 +39,30 @@ class AnnaMuMuFacade:
 	def __init__(self, tchain=None, tchain2=None, configfile=""):
 		""" cstr """
 
+		print(" ========== Init AnnaMuMuFacade ========== ")
+
 		self._tchain = tchain
 		self._tchain2 = tchain2
 		self._configfile = AnnaMuMuConfig()
 		
-		if self._tchain is not None and type(self._tchain) is not TChain:
-			print("{} is not a TChain".format(tchain))
+		if self._tchain != None and type(self._tchain) != type(TChain()):
+			error("{} != a TChain".format(tchain))
 			return
 
-		if self._tchain2 is not None and type(self._tchain2) is not TChain:
-			print("{} is not a TChain".format(tchain2))
+		if self._tchain2 != None and type(self._tchain2) != type(TChain()):
+			error("{} != a TChain".format(tchain2))
 			return
+
 
 		# Set _configfile 
+		info(" Try to read config file ...")
 		if self._configfile.ReadFromFile(configfile) is True:
-			print "config file set !"
+			info(" ---- config file set !")
 
 		else:
-			print "Cannot set config file"
+			error("Cannot set config file")
 
+		print(" ========================================= ")
 	# ______________________________________
 	def __str__(self):
 		return "I am your father"
@@ -78,7 +87,7 @@ class AnnaMuMuFacade:
 			adoptOK = self.GetResultFile().Adopt(spectrapath, spectra)
 
 			if adoptOK is True:
-				print "+++Spectra {} adopted".format(spectra.GetName())
+				print("+++Spectra {} adopted".format(spectra.GetName()))
 			
 			else:
 				print("Could not adopt spectra {}".format(spectra.GetName()))
@@ -99,7 +108,7 @@ class AnnaMuMuFacade:
 		return
 				
 	# ______________________________________
-	def FitParticle(self, particle_name="jpsi", binning=[], option=""):
+	def FitParticle(self, particle_name="JPsi", binning=[], option=""):
 		"""Fit invariant mass spectrum
 		
 		Run over all combination of Centrality/Cut/FitType from the config.
@@ -115,49 +124,64 @@ class AnnaMuMuFacade:
 							
 		"""
 
-		print " ================================================================ " 
-		print "        			FitParticle {} for \
-											binning {}".format(particle_name, binning) 
-		print " ================================================================ " 
+		print(" ================================================================ ")
+		print("      	FitParticle {} for binning {}".format(particle_name, binning))
+		print(" ================================================================ ")
 
-		config = self.Config()
+		print(self._configfile._map)
 
-		for centrality in config.GetCentrality():
-			for cuts in config.GetCutCombination():
-				for leaf in config.GetLeaf():
+		for centrality in self._configfile.GetCentrality():
+			for cuts in self._configfile.GetCutCombination():
+				for leaf in self._configfile.GetLeaf():
 
-					if self._tchain is not None:
+					if self._tchain != None:
 						spectrapath = "{}/FitParticle/{}/{}/{}".format(
-							self._tchain.GetName(), centrality, cuts, leaf)
+							self._tchain.GetName(),
+							centrality,
+							cuts,
+							leaf
+						)
 						fitter = AnnaMuMuFitter(particle_name, binning)
 						spectra = fitter.Fit(
-							self._tchain, leaf, centrality, cuts, config.GetFitType(), option)
+							self._tchain,
+							leaf,
+							centrality,
+							cuts,
+							self._configfile.GetFitType(),
+							option
+						)
 						self.AdoptSectra(spectra, spectrapath)
 
-					if self._tchain2 is not None:
+					if self._tchain2 != None:
 						spectrapath = "{}/FitParticle/{}/{}/{}".format(
-							self._tchain2.GetName(), centrality, cuts, leaf)
+							self._tchain2.GetName(),
+							centrality,
+							cuts,
+							leaf
+						)
 						fitter = AnnaMuMuFitter(particle_name, binning)
 						spectra = fitter.Fit(
-							self._tchain2, leaf, centrality, cuts, config.GetFitType(), option)
+							self._tchain2,
+							leaf,
+							centrality,
+							cuts,
+							self._configfile.GetFitType(),
+							option
+						)
 						self.AdoptSectra(spectra, spectrapath)
 
 		return
 
 	# ______________________________________
-	def Config(self):
-		return copy.deepcopy(self._configfile)
-
-	# ______________________________________
 	def GetResultFile(self):
 		""" Create / get results file in the local directory """
 		if os.path.isfile('./AnnaResults.root'):
-			print 'Opening result file ...'
+			print('Opening result file ...')
 			f = TFile('AnnaResults.root')
 			return f
 
 		else:
-			print "Creating Result File ..."
+			print("Creating Result File ...")
 			f = TFile.Open('AnnaResults.root', 'recreate')
 			return f
 
