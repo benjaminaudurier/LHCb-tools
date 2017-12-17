@@ -5,6 +5,9 @@
 
 from ROOT import TNamed, TObjArray
 from .AnnaMuMuResult import AnnaMuMuResult
+from logging import debug as debug
+from logging import error as error
+from logging import warning as warning
 
 
 class AnnaMuMuSpectra(TNamed):
@@ -21,40 +24,30 @@ class AnnaMuMuSpectra(TNamed):
 		""" cstr """
 
 		TNamed.__init__(self, name, title)
-		# self._binning = dict()  		# the binning (Note sure if list() is pyROOT storage proof)
-		# self._results = TObjArray()  	# where are stored the AnnaMuMuResults
 		self._results = dict()  	# where are stored the AnnaMuMuResults
-		self._weight = 1.0  			# results weights
+		self._weight = 1.0  		# results weights
 
 	# ______________________________________
 	def AdoptResult(self, result, bin):
 		""" adopt (i.e. we are becoming the owner) a result for a given bin"""
 
-		if not result or type(result) != type(AnnaMuMuResult):
-			print("Cannot adopt a null result or a non result")
+		if result is None:
+			error("AdoptResult: Cannot adopt a null result list")
 			return 0
 
-		# ==== Version with TObjArray =====
-		# increment binning
-		# self._binning.append(bin) 
-
-		# sizeBeforeAdd = self._results.GetEntriesFast()
-		# self._results.Add(result)  # Add the result to the recently added bin
-		# sizeAfterAdd = self._results.GetEntriesFast()
-
-		# ==== Version with dict =====
+		debug("AdoptResult: result : {}".format(result))
 		sizeBeforeAdd = len(self._results)
-		self._results[str(bin)] = result  # Add the result to the recently added bin
+		self._results[str(bin)] = result  # Add the result for a given bin type
 		sizeAfterAdd = len(self._results)
 			
 		if sizeBeforeAdd >= sizeAfterAdd:
-			print("Error adopting result {} to spectra {}".format(
+			error("AdoptResult: Error adopting result {} to spectra {}".format(
 				result.GetName(), 
-				self._name))
+				self.GetName()))
 			return 0
 		
 		else: 
-			print("Hello from AdoptResult")
+			print(" --- result {} adopted !".format(result.GetName(), sizeAfterAdd - sizeBeforeAdd))
 			return 1
 
 

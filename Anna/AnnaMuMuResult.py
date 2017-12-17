@@ -10,6 +10,18 @@ from enum import Enum  # not python2.7 package ...
 from logging import debug
 
 
+# ______________________________________
+class MergingMethod(Enum):
+	kMean = 0,
+	kSum = 1
+
+# ______________________________________
+class Index(Enum):
+	kValue = 0,
+	kStat = 1,
+	kSys = 2
+
+# ______________________________________
 class AnnaMuMuResult(TNamed):
 	"""Store results Anna framework
 	
@@ -27,23 +39,23 @@ class AnnaMuMuResult(TNamed):
 		""" cstr"""
 
 		# General for all AnnaMuMuResult
-		TNamed.__init__(name=name, title=title)
+		TNamed.__init__(self, name, title)
 		self._subresults = None  # dict()
 		self._subresults_to_be_incuded = None  # list()
 		
 		# How to merge quantity for subresults 
-		self._mergingMethod = Enum('kMean', 'kSum')  
-		self._resultMergingMethod = self._mergingMethod('kMean')
+		self._mergingMethod = MergingMethod  
+		self._resultMergingMethod = self._mergingMethod.kMean
 		
 		# Will be define only if self is a sub-result
 		self._binning = None
 		self._histo = histo
-		self._index = Enum('kValue', 'kStat', 'kSys')  # not working !
+		self._index = Index
 		self._map = None
 		self._weigth = 1.
 
 	# ______________________________________
-	def AdoptSubResult(self, r):
+	def AdoptSubResult(self, result_list):
 		# ==== TObjArray version 
 		# if self._subresults is None:
 		# 	self._subresults = TObjArray()
@@ -60,15 +72,15 @@ class AnnaMuMuResult(TNamed):
 			self._subresults = dict()
 
 		subresultsBeforeAdd = len(self._subresults)
-		self._subresults[r.GetName()] = r
+		for r in result_list:
+			self._subresults[r.GetName()] = r
+			self.SubResultsToBeIncluded().append(r.GetName())
 		subresultsAfterAdd = len(self._subresults)
 
-		self.SubResultsToBeIncluded()[r.GetName()]
-
 		if subresultsBeforeAdd < subresultsAfterAdd: 
-			return True
+			return subresultsAfterAdd - subresultsBeforeAdd
 		else: 
-			return False
+			return 0
 
 	# ______________________________________
 	def DeleteEntry(self, entry):
@@ -139,11 +151,11 @@ class AnnaMuMuResult(TNamed):
 
 		# self._map existes only for AnnaMuMuResults w/o subresults
 		if self._map is not None:
-			error_stat = self._map[name][self._index('kStat')]
+			error_stat = self._map[name][self._index.kStat]
 			return error_stat
 
 		# Mean method (by default)
-		if self._resultMergingMethod == self._mergingMethod('kMean'):
+		if self._resultMergingMethod == self._mergingMethod.kMean:
 
 			n, werr, sumw = 0, 0., 0.
 
@@ -237,7 +249,7 @@ class AnnaMuMuResult(TNamed):
 
 		# self._map existes only for AnnaMuMuResults w/o subresults
 		if self._map is not None:
-			error_sys = self._map[name][self._index('kSys')]
+			error_sys = self._map[name][self._index.kSys]
 			return error_sys if error_sys is not None else 0.0
 
 		v1, v2, sm = 0., 0., 0.
@@ -311,7 +323,7 @@ class AnnaMuMuResult(TNamed):
 	# ______________________________________
 	def GetSubResultNameList(self):
 		"""
-			get a comma separated list of our subresult aliases
+		get a comma separated list of our subresult aliases
 		"""
 		subresult_name_list = ''
 
@@ -349,11 +361,11 @@ class AnnaMuMuResult(TNamed):
 
 		# self._map existes only for AnnaMuMuResults w/o subresults
 		if self._map is not None:
-			value = self._map[name][self._index('kValue')]
+			value = self._map[name][self._index.kValue]
 			return value
 
 		# Mean method (by default)
-		if self._resultMergingMethod == self._mergingMethod('kMean'):
+		if self._resultMergingMethod == self._mergingMethod.kMean:
 
 			mean, sm = 0, 0., 0.
 
@@ -638,9 +650,9 @@ class AnnaMuMuResult(TNamed):
 			p = [value, errorStat, rms]
 			self._map[name] = p
 
-		p[self._index('kValue')] = value
-		p[self._index('kErrorStat')] = errorStat
-		p[self._index('kRMS')] = rms
+		p[self._index.kValue] = value
+		p[self._index.kErrorStat] = errorStat
+		p[self._index.kRMS] = rms
 
 	# ______________________________________
 	def SubResult(self, sub_result_name):

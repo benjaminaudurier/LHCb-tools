@@ -9,7 +9,7 @@ from logging import debug as debug
 from logging import error as error
 from logging import warning as warning
 from logging import info as info
-from ROOT import TChain, TFile
+from ROOT import TChain, TFile, TObject, TDirectoryFile, gDirectory
 import copy
 import os.path
 
@@ -62,38 +62,64 @@ class AnnaMuMuFacade:
 		else:
 			error("Cannot set config file")
 
-		print(" ========================================= ")
+		print(" ========================================= \n\n")
 	# ______________________________________
 	def __str__(self):
 		return "I am your father"
 
 	# ______________________________________
-	def AdoptSectra(self, spectra, spectrapath):
-		"""Add spectra to result file
+	def AdoptResult(self, result, result_path):
+		"""Add result to result file
 		
 		Arguments:
-			spectra {AnnaMuMuSpectra} --
-			spectrapath {str} --
+			result {AnnaMuMuresult} --
+			result_path {str} --
 		"""
 
-		if type(spectra) is type(AnnaMuMuSpectra):
+		f = None
+		""" Create / get results file in the local directory """
+		if os.path.isfile('./AnnaResults.root'):
+			print("AdoptResult: Openning File ...")
+			f = TFile.Open('AnnaResults.root', 'update')
 
-			o = self.GetResultFile().GetObject(spectrapath, spectra.GetName())
+		else:
+			print("AdoptResult: Creating Result File ...")
+			f = TFile.Open('AnnaResults.root', 'recreate')
 
-			if (o) is True:
-				print("Replacing {}/{}".format(spectrapath, spectra.GetName()))
-				self.GetResultFile().Remove("{}/{}".format(spectrapath, spectra.GetName()))
+		if result != None:
+			debug('AdoptResult: result : {}'.format(result))
 
-			adoptOK = self.GetResultFile().Adopt(spectrapath, spectra)
+			# Check if directory exist, otherwise create it
+			# o = f.Get(result_path)
+			# if o is None:
+			print('Creating directory in {}'.format(result_path))
+			f.mkdir(result_path)
+			
+			move_to_dir = f.cd(result_path)
+			if move_to_dir is False:
+				error("AdoptResult: Cannot move to dir {}".format(result_path))
+				return
 
-			if adoptOK is True:
-				print("+++Spectra {} adopted".format(spectra.GetName()))
+			# Check if file exists
+			o = gDirectory.Get(result.GetName())
+			if o != None:
+				print("Replacing {}/{}".format(result_path, result.GetName()))
+				gDirectory.Delete('{};*'.format(result.GetName()))
+
+			adoptOK = result.Write()
+
+			if adoptOK != 0:
+				print("+++result {} adopted".format(result.GetName()))
 			
 			else:
-				print("Could not adopt spectra {}".format(spectra.GetName()))
+				error("AdoptResult: Could not adopt result {}".format(result.GetName()))
+				return
 
 		else: 
-			print("Error creating spectra")
+			error("AdoptResult: Error creating result")
+			return
+
+		f.Close()
 
 	# ______________________________________
 	def DrawMinv(self, particle_name="jpsi"):
@@ -128,7 +154,7 @@ class AnnaMuMuFacade:
 		print("      	FitParticle {} for binning {}".format(particle_name, binning))
 		print(" ================================================================ ")
 
-		print(self._configfile._map)
+		debug("FitParticle: AnnaMuMuConfig map : \n {}".format(self._configfile._map))
 
 		for centrality in self._configfile.GetCentrality():
 			for cuts in self._configfile.GetCutCombination():
@@ -150,7 +176,7 @@ class AnnaMuMuFacade:
 							self._configfile.GetFitType(),
 							option
 						)
-						self.AdoptSectra(spectra, spectrapath)
+						self.AdoptResult(spectra, spectrapath)
 
 					if self._tchain2 != None:
 						spectrapath = "{}/FitParticle/{}/{}/{}".format(
@@ -168,7 +194,7 @@ class AnnaMuMuFacade:
 							self._configfile.GetFitType(),
 							option
 						)
-						self.AdoptSectra(spectra, spectrapath)
+						self.AdoptResult(spectra, spectrapath)
 
 		return
 
@@ -176,8 +202,7 @@ class AnnaMuMuFacade:
 	def GetResultFile(self):
 		""" Create / get results file in the local directory """
 		if os.path.isfile('./AnnaResults.root'):
-			print('Opening result file ...')
-			f = TFile('AnnaResults.root')
+			f = TFile.Open('AnnaResults.root', 'update')
 			return f
 
 		else:
