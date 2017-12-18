@@ -40,8 +40,8 @@ class AnnaMuMuResult(TNamed):
 		"""cstr
 				
 		Arguments:
-			name {str{}} -- 
-			title {str{}} -- 
+			name {str} -- 
+			title {str} -- 
 		
 		Keyword Arguments:
 			histo {TH1} -- (default: {None})
@@ -93,7 +93,7 @@ class AnnaMuMuResult(TNamed):
 		"""Delete entry in self._subresults_to_be_incuded
 				
 		Arguments:
-			entry {str{}} --
+			entry {str} --
 		"""
 
 		while True:
@@ -149,8 +149,8 @@ class AnnaMuMuResult(TNamed):
 		of self._resultMergingMethod
 				
 		Arguments:
-			name {str{}} -- Name of the variable
-			subresult_name {str{}} -- subresult name
+			name {str} -- Name of the variable
+			subresult_name {str} -- subresult name
 		
 		Returns:
 			number -- None in case of error
@@ -252,8 +252,8 @@ class AnnaMuMuResult(TNamed):
 		"""Compute the rms of the subresults.
 		
 		Arguments:
-			name {str{}} -- Name of the variable
-			subresult_name {str{}} -- subresults
+			name {str -- Name of the variable
+			subresult_name {str -- subresults
 		
 		Returns:
 			number -- 0 in case of problem
@@ -371,8 +371,8 @@ class AnnaMuMuResult(TNamed):
 		of self._resultMergingMethod
 				
 		Arguments:
-			name {str{}} -- Name of the variable
-			subresult_name {str{}} -- subresult name
+			name {str -- Name of the variable
+			subresult_name {str -- subresult name
 		
 		Returns:
 			number -- None in case of error
@@ -468,10 +468,9 @@ class AnnaMuMuResult(TNamed):
 
 	# ______________________________________
 	def HasValue(self, name, subresult_name):
-		"""
-			Whether this result (or subresult if subresult_name is provided) 
-			has a property named "name"
-			When having subresults, return the number of subresults that have this value
+		"""Whether this result (or subresult if subresult_name is provided) 
+		has a property named "name"
+		When having subresults, return the number of subresults that have this value
 		"""
 		if len(subresult_name) > 0:
 			if self._subresults is None:

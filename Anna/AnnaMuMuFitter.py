@@ -91,7 +91,7 @@ class AnnaMuMuFitter:
 		Fiew tests to check if binning pass several conditions
 		
 		Arguments:
-			binning {list{}}
+			binning {list}
 		
 		Returns:
 			bool -- Binning pass the conditions or not
@@ -242,7 +242,7 @@ class AnnaMuMuFitter:
 		to be the value for a parameter of the fit function.
 				
 		Arguments:
-			fit_type {srt{}} -- example : 
+			fit_type {str} -- example : 
 				particle=JPsi|leaf=jpsi_M|range=2;5|signal=CB2_pdf|bckgr=Bkg_pdf
 		
 		Returns:
@@ -307,15 +307,15 @@ class AnnaMuMuFitter:
 		that is returned at the end of the method.	
 
 		Arguments:
-			tchain {TChain{}} 
-			leaf {str{}} 
-			centrality {str{}} 
-			cut {str{}} 
-			fit_types {list{}} 
-			option {str{}} 
+			tchain {TChain} 
+			leaf {str} 
+			centrality {str} 
+			cut {str} 
+			fit_types {list} 
+			option {str} 
 		
 		Returns:
-			AnnaMuMuSpectra{} -- storage class for a results
+			AnnaMuMuSpectra -- storage class for a results
 		"""
 
 		# The spectra that will be return
@@ -369,11 +369,11 @@ class AnnaMuMuFitter:
 		The result is stored in a AnnaMuMuResult
 		
 		Arguments:
-			fit_methods {list{}} -- fit configuration string
-			histo {TH1{}} -- histo to be fitted
+			fit_methods {list} -- fit configuration string
+			histo {TH1} -- histo to be fitted
 		
 		Returns:
-			list{} -- contains all the AnnaMuMuResults
+			list -- contains all the AnnaMuMuResults
 		"""
 
 		try:
@@ -488,13 +488,13 @@ class AnnaMuMuFitter:
 		according to each combination of centrality/cut/leaf/binning.
 		
 		Arguments:
-			tchain {TChain{}} -- 
-			leaf {str{}} -- 
-			centrality {str{}} -- 
-			cut {str{}} -- 
+			tchain {TChain} -- 
+			leaf {str} -- 
+			centrality {str} -- 
+			cut {str} -- 
 		
 		Returns:
-			list{} -- contains al histograms
+			list -- contains al histograms
 		"""
 
 		histo_list = list()
