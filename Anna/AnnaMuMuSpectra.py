@@ -3,11 +3,10 @@
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
 
-from ROOT import TNamed, TObjArray
-from .AnnaMuMuResult import AnnaMuMuResult
+from ROOT import TNamed
 from logging import debug as debug
 from logging import error as error
-from logging import warning as warning
+
 
 
 class AnnaMuMuSpectra(TNamed):
@@ -47,7 +46,7 @@ class AnnaMuMuSpectra(TNamed):
 			return 0
 		
 		else: 
-			print(" --- result {} adopted !".format(result.GetName(), sizeAfterAdd - sizeBeforeAdd))
+			print(" --- result {} adopted !".format(result.GetName()))
 			return 1
 
 

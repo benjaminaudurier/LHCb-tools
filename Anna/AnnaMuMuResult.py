@@ -3,10 +3,9 @@
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
 
-from ROOT import TNamed, TObject, TObjArray, TList, TObjString, TMath
+from ROOT import TNamed
 import math
-import copy
-from enum import Enum  # not python2.7 package ...
+from enum import Enum
 from logging import debug
 
 
@@ -15,20 +14,22 @@ class MergingMethod(Enum):
 	kMean = 0,
 	kSum = 1
 
+
 # ______________________________________
 class Index(Enum):
 	kValue = 0,
 	kStat = 1,
 	kSys = 2
 
+
 # ______________________________________
 class AnnaMuMuResult(TNamed):
-	"""Store results Anna framework
+	"""Store results for the Anna framework
 	
-	Base class to hold a set of results for the same quantity,
+	Base class to hold a set of results of the same quantity,
 	computed using various methods, each with their errors.
 	A AnnaMuMuResult can hold other AnnaMuMuResult, refered as
-	sub-results later.
+	subresults later.
 	
 	Extends:
 		TNamed
@@ -36,7 +37,15 @@ class AnnaMuMuResult(TNamed):
 
 	# ______________________________________
 	def __init__(self, name, title, histo=None):
-		""" cstr"""
+		"""cstr
+				
+		Arguments:
+			name {str{}} -- 
+			title {str{}} -- 
+		
+		Keyword Arguments:
+			histo {TH1} -- (default: {None})
+		"""
 
 		# General for all AnnaMuMuResult
 		TNamed.__init__(self, name, title)
@@ -56,18 +65,15 @@ class AnnaMuMuResult(TNamed):
 
 	# ______________________________________
 	def AdoptSubResult(self, result_list):
-		# ==== TObjArray version 
-		# if self._subresults is None:
-		# 	self._subresults = TObjArray()
-		# 	self._subresults.SetOwner(True)
+		"""Adopt all results in the result list
+				
+		Arguments:
+			result_list {list()} -- Must contains AnnaMuMuResults
+		
+		Returns:
+			int -- number of subresults stored
+		"""
 
-		# subresultsBeforeAdd = self._subresults.GetEntriesFast()
-		# self._subresults.Add(r)
-		# subresultsAfterAdd = self._subresults.GetEntriesFast()
-
-		# self.SubResultsToBeIncluded().Add(TObjString(r.Alias()))
-
-		# ==== Version with dict =====
 		if self._subresults is None:
 			self._subresults = dict()
 
@@ -84,6 +90,11 @@ class AnnaMuMuResult(TNamed):
 
 	# ______________________________________
 	def DeleteEntry(self, entry):
+		"""Delete entry in self._subresults_to_be_incuded
+				
+		Arguments:
+			entry {str{}} --
+		"""
 
 		while True:
 			try:
@@ -93,7 +104,9 @@ class AnnaMuMuResult(TNamed):
 
 	# ______________________________________
 	def ErrorAB(a, aerr, b, berr):
-
+		"""
+		Compute square root of the quadratic sum
+		"""
 		e = 0.0
 
 		if math.fabs(a) > 1E-12:
@@ -106,9 +119,11 @@ class AnnaMuMuResult(TNamed):
 
 	# ______________________________________
 	def Exclude(self, sub_result_list):
-		""" 
-			exclude some subresult names from the list of subresult
-			to be used when computing the mean 
+		""" Exclude some subresult names from the list of subresult
+		to be used when computing the mean of a value 
+				
+		Arguments:
+			sub_result_list {list()} -- 
 		"""
 
 		slist = sub_result_list
@@ -126,25 +141,34 @@ class AnnaMuMuResult(TNamed):
 				self.DeleteEntry(a)
 	
 	# ______________________________________
-	def GetErrorStat(self, name, sub_result_name):
-		"""    
-		compute the mean error value from all subresults that are included
-		return None if any problem
+	def GetErrorStat(self, name, subresult_name):
+		"""Get the stat. error of a value (either directly 
+		or by computing the mean of the subresults).
+
+		Default method is mean, but it can be changed with a different settings
+		of self._resultMergingMethod
+				
+		Arguments:
+			name {str{}} -- Name of the variable
+			subresult_name {str{}} -- subresult name
+		
+		Returns:
+			number -- None in case of error
 		"""
 
 		# If we specify a subresults
-		if len(sub_result_name) > 0:
+		if len(subresult_name) > 0:
 
 			if not self._subresult:
 
 				print("No subresult from which \
-						I could get the {} one...".format(sub_result_name))
+						I could get the {} one...".format(subresult_name))
 				return None
 
-			sub = self._subresult[sub_result_name]
+			sub = self._subresult[subresult_name]
 			if not sub:
 				print("No subresult from which \
-						I could get the {} one...".format(sub_result_name))
+						I could get the {} one...".format(subresult_name))
 				return None
 
 			return sub.GetErrorStat(name)
@@ -224,25 +248,30 @@ class AnnaMuMuResult(TNamed):
 				return None
 
 	# ______________________________________
-	def GetRMS(self, name, sub_result_name):
-		"""
-			compute the rms of the subresults
-			returns wero if no subresults
+	def GetRMS(self, name, subresult_name):
+		"""Compute the rms of the subresults.
+		
+		Arguments:
+			name {str{}} -- Name of the variable
+			subresult_name {str{}} -- subresults
+		
+		Returns:
+			number -- 0 in case of problem
 		"""
 
 		# If we specify a subresults
-		if len(sub_result_name) > 0:
+		if len(subresult_name) > 0:
 
 			if not self._subresult:
 
 				print("No subresult from which \
-						I could get the {} one...".format(sub_result_name))
+						I could get the {} one...".format(subresult_name))
 				return 0
 
-			sub = self._subresult[sub_result_name]
+			sub = self._subresult[subresult_name]
 			if not sub:
 				print("No subresult from which \
-						I could get the {} one...".format(sub_result_name))
+						I could get the {} one...".format(subresult_name))
 				return 0
 
 			return sub.GetRMS(name)
@@ -322,8 +351,7 @@ class AnnaMuMuResult(TNamed):
 
 	# ______________________________________
 	def GetSubResultNameList(self):
-		"""
-		get a comma separated list of our subresult aliases
+		"""Get a comma separated list of our subresult aliases
 		"""
 		subresult_name_list = ''
 
@@ -336,25 +364,33 @@ class AnnaMuMuResult(TNamed):
 		return subresult_name_list
 
 	# ______________________________________
-	def GetValue(self, name, sub_result_name):
-		"""    
-		get a value (either directly or by computing the mean of the subresults)
-		return None if any problem
+	def GetValue(self, name, subresult_name):
+		"""Get a value (either directly or by computing the mean of the subresults).
+				
+		Default method is mean, but it can be changed with a different settings
+		of self._resultMergingMethod
+				
+		Arguments:
+			name {str{}} -- Name of the variable
+			subresult_name {str{}} -- subresult name
+		
+		Returns:
+			number -- None in case of error
 		"""
 
 		# If we specify a subresults
-		if len(sub_result_name) > 0:
+		if len(subresult_name) > 0:
 
 			if not self._subresult:
 				print("No subresult from which \
-						I could get the {} one...".format(sub_result_name))
+						I could get the {} one...".format(subresult_name))
 				return None
 
-			sub = self._subresult[sub_result_name]
+			sub = self._subresult[subresult_name]
 
 			if not sub:
 				print("No subresult from which \
-						I could get the {} one...".format(sub_result_name))
+						I could get the {} one...".format(subresult_name))
 				return None
 
 			return sub.GetValue(name)
@@ -431,22 +467,22 @@ class AnnaMuMuResult(TNamed):
 			return sm
 
 	# ______________________________________
-	def HasValue(self, name, sub_result_name):
+	def HasValue(self, name, subresult_name):
 		"""
-			Whether this result (or subresult if sub_result_name is provided) 
+			Whether this result (or subresult if subresult_name is provided) 
 			has a property named "name"
 			When having subresults, return the number of subresults that have this value
 		"""
-		if len(sub_result_name) > 0:
+		if len(subresult_name) > 0:
 			if self._subresults is None:
 				print("Error : No subresults from which \
-				I could get the {} one...".format(sub_result_name))
+				I could get the {} one...".format(subresult_name))
 				return False
 		
 		try:
-			sub = self._subresults[sub_result_name]
+			sub = self._subresults[subresult_name]
 		except KeyError:
-			print("Error : Could not get subresult named " + sub_result_name)
+			print("Error : Could not get subresult named " + subresult_name)
 			return False
 
 		return sub.HasValue(name)
@@ -454,9 +490,13 @@ class AnnaMuMuResult(TNamed):
 		# No _subresults if results contains subresults
 		if self._subresults is not None:
 			try:
-				self._subresults[sub_result_name]
+				self._subresults[subresult_name]
 			except KeyError:
-				print("Error : Could not get subresult named " + sub_result_name + " from map")
+				print(
+					"Error : Could not get subresult named " 
+					+ subresult_name 
+					+ " from map"
+				)
 				return False
 			return True
 
@@ -655,7 +695,7 @@ class AnnaMuMuResult(TNamed):
 		p[self._index.kRMS] = rms
 
 	# ______________________________________
-	def SubResult(self, sub_result_name):
+	def SubResult(self, subresult_name):
 		"""
 		get a given subresult
 		"""
@@ -663,7 +703,7 @@ class AnnaMuMuResult(TNamed):
 			return None
 		
 		for r in self._subresults:
-			if r.GetName() == sub_result_name: 
+			if r.GetName() == subresult_name: 
 				return r
 
 		return None

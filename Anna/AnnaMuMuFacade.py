@@ -4,20 +4,15 @@
 #  @date   2017-11-30 
 from .AnnaMuMuConfig import AnnaMuMuConfig
 from .AnnaMuMuFitter import AnnaMuMuFitter
-from .AnnaMuMuSpectra import AnnaMuMuSpectra
-from logging import debug as debug
-from logging import error as error
-from logging import warning as warning
-from logging import info as info
-from ROOT import TChain, TFile, TObject, TDirectoryFile, gDirectory
-import copy
+from logging import debug, error, info
+from ROOT import TChain, TFile, gDirectory
 import os.path
 
 
 class AnnaMuMuFacade:
 	"""
 	The framework is meant to work inside the LHCb framework 
-	as it relies evely on OSTAP.
+	as it relies on OSTAP for the fits.
 	So, prior to import this module, the user must be sure to be 
 	in an Ostap session (lb-run Bender/latest ostap).
 
@@ -25,13 +20,13 @@ class AnnaMuMuFacade:
 		- tchain : A first TChain object containing the data.
 		
 		- tchain2 : A second TChain object, not medatory, but usefull 
-					in MC studies for instance (To be implemented).
+					in MC studies for instance (just in case in the futur).
 
 		- configfile : read by AnnaMuMuConfig to configure 
 						our object (See AnnaConfig for details)
 
-	As a facade, each functions call a dedicade class inside the framework when 
-	running the task (exp: fit, print(diagrams ... ).
+	As a facade, each functions call a dedicade class inside the framework who 
+	actually makes the job (exp: fit, print(diagrams ... ).
 	See the classes and functions documentations for more details.
 	"""
 
@@ -46,13 +41,12 @@ class AnnaMuMuFacade:
 		self._configfile = AnnaMuMuConfig()
 		
 		if self._tchain != None and type(self._tchain) != type(TChain()):
-			error("{} != a TChain".format(tchain))
+			error("{} is not a TChain".format(tchain))
 			return
 
 		if self._tchain2 != None and type(self._tchain2) != type(TChain()):
-			error("{} != a TChain".format(tchain2))
+			error("{} is not a TChain".format(tchain2))
 			return
-
 
 		# Set _configfile 
 		info(" Try to read config file ...")
@@ -69,15 +63,18 @@ class AnnaMuMuFacade:
 
 	# ______________________________________
 	def AdoptResult(self, result, result_path):
-		"""Add result to result file
+		"""Add result to TFile result.
+		
+		The method create / get a TFile in the local directory
+		called AnnaResults.root.
 		
 		Arguments:
-			result {AnnaMuMuresult} --
-			result_path {str} --
+			result {[type]} -- must inherit from TObject
+			result_path {[type]} -- path inside AnnaResults.root
 		"""
 
+		# Create / get results file in the local directory """
 		f = None
-		""" Create / get results file in the local directory """
 		if os.path.isfile('./AnnaResults.root'):
 			print("AdoptResult: Openning File ...")
 			f = TFile.Open('AnnaResults.root', 'update')
@@ -90,11 +87,10 @@ class AnnaMuMuFacade:
 			debug('AdoptResult: result : {}'.format(result))
 
 			# Check if directory exist, otherwise create it
-			# o = f.Get(result_path)
-			# if o is None:
-			print('Creating directory in {}'.format(result_path))
+			print('Try to create directory in {}'.format(result_path))
 			f.mkdir(result_path)
-			
+
+			# Move to directory
 			move_to_dir = f.cd(result_path)
 			if move_to_dir is False:
 				error("AdoptResult: Cannot move to dir {}".format(result_path))
@@ -106,8 +102,8 @@ class AnnaMuMuFacade:
 				print("Replacing {}/{}".format(result_path, result.GetName()))
 				gDirectory.Delete('{};*'.format(result.GetName()))
 
+			# Write result
 			adoptOK = result.Write()
-
 			if adoptOK != 0:
 				print("+++result {} adopted".format(result.GetName()))
 			
@@ -135,19 +131,20 @@ class AnnaMuMuFacade:
 				
 	# ______________________________________
 	def FitParticle(self, particle_name="JPsi", binning=[], option=""):
-		"""Fit invariant mass spectrum
+		"""Main Fit method
 		
-		Run over all combination of Centrality/Cut/FitType from the config.
+		Run over all combination of Centrality/Cut/Leaf from the config.
 		The fit process is passed to AnnaMuMuFitter class that return an
-		AnnaMuMuSpectra stored in a root file accordingly.
-		
+		AnnaMuMuSpectra to be stored in the result TFile.
+						
 		Keyword Arguments:
-			particle_name {str} -- Help to select the correct FitType 
-									(default: {"jpsi"})
-			binning {str || list} -- Could be either a str of a lists. 
-									See AnnaMuMuFitter constructor for details
-			option {str} -- See AnnaMuMuFitter constructor (default: {""}). 
-							
+			particle_name {str} -- To set the particle mass 
+				in AnnaMuMuFitter (default: {"JPsi"})
+			binning {list} -- Binning conditions for the fit. (default: {[]})
+				Should be a list as [str(leaf_name), x.x, x.x, x.x ...]
+				example :
+					["JPSI_PT", 0., 4000., 8000.]) 
+			option {str} -- possible options (for futur dvlp) (default: {""})
 		"""
 
 		print(" ================================================================ ")
@@ -157,14 +154,14 @@ class AnnaMuMuFacade:
 		debug("FitParticle: AnnaMuMuConfig map : \n {}".format(self._configfile._map))
 
 		for centrality in self._configfile.GetCentrality():
-			for cuts in self._configfile.GetCutCombination():
+			for cut in self._configfile.GetCutCombination():
 				for leaf in self._configfile.GetLeaf():
 
 					if self._tchain != None:
 						spectrapath = "{}/FitParticle/{}/{}/{}".format(
 							self._tchain.GetName(),
 							centrality,
-							cuts,
+							cut,
 							leaf
 						)
 						fitter = AnnaMuMuFitter(particle_name, binning)
@@ -172,7 +169,7 @@ class AnnaMuMuFacade:
 							self._tchain,
 							leaf,
 							centrality,
-							cuts,
+							cut,
 							self._configfile.GetFitType(),
 							option
 						)
@@ -182,7 +179,7 @@ class AnnaMuMuFacade:
 						spectrapath = "{}/FitParticle/{}/{}/{}".format(
 							self._tchain2.GetName(),
 							centrality,
-							cuts,
+							cut,
 							leaf
 						)
 						fitter = AnnaMuMuFitter(particle_name, binning)
@@ -190,7 +187,7 @@ class AnnaMuMuFacade:
 							self._tchain2,
 							leaf,
 							centrality,
-							cuts,
+							cut,
 							self._configfile.GetFitType(),
 							option
 						)

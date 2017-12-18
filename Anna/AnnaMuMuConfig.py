@@ -3,16 +3,11 @@
 #  helper class to store steering options for other Anna classes 
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
-import os
-from logging import debug as debug
-from logging import error as error
-from logging import warning as warning
-from logging import info as info
-import copy
+from logging import debug, warning, info
 
 class AnnaMuMuConfig:
-	""" 
-	Holds some options like the fit to be performed, conditions on the kinematices ...
+	"""Helper class to store steering options for other Anna classes
+	
 	This class reads an extern text file and store info in a dictionnary. 
 	Each line of the config file should be written as <key> : <value> 
 	"""
@@ -30,7 +25,22 @@ class AnnaMuMuConfig:
 
 	# ______________________________________
 	def ReadFromFile(self, configfile=""):
-		""" Read the configuration file and set tuples with correct entries. """
+		"""Read the configuration file and set tuples with correct entries.
+		
+		All lines in the file should be written as <key> : <value>>
+		example:
+			#Centrality: ALL
+			Leaf: JPSI_M
+			#CutCombination: 2.5<JPSI_Y&&JPSI_Y<4
+
+		Automatically skip empty line and line starting with '#'
+		
+		Keyword Arguments:
+			configfile {str} -- file name (default: {""})
+		
+		Returns:
+			bool -- weither or not the function succeeded
+		"""
 
 		with open(configfile, "r") as file:
 			lines = file.readlines()
@@ -86,8 +96,17 @@ class AnnaMuMuConfig:
 
 	# ______________________________________
 	def DecodeLine(self, line=""):
-		"""  return key and value form the line"""
-
+		"""Decode a line
+		
+		Inner functions to get key : value pair from
+		configuration file
+		
+		Keyword Arguments:
+			line {str} -- the line to read (default: {""})
+		
+		Returns:
+			{str}, {str} -- key, value
+		"""
 		split_line = line.replace(" ", "")
 		split_line = split_line.strip()
 		split_line = split_line.split(":")

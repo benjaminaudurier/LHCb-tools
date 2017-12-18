@@ -10,10 +10,7 @@ import ROOT
 # from Ostap.PyRoUts import *
 # import Ostap.FitModels as Models
 # Python modules
-from logging import debug as debug
-from logging import error as error
-from logging import warning as warning
-import copy
+from logging import debug, error, warning
 
 
 class AnnaMuMuFitter:
@@ -25,15 +22,15 @@ class AnnaMuMuFitter:
 	# ______________________________________
 	def __init__(self, particle=None, binning=[]):
 		"""cstr
-		
-		[description]
-		
+				
 		Keyword Arguments:
 			particle {str} -- use for setting purposes (default: {""})
 			binning {list} -- the binning (or leaf name on which we apply cut). 
-							By convention, binning[0] should
-			contain the name of the binning. See AnnaMuMuFitter::DefaultBinning()
-			for the possible values (default: {[]})
+					By convention, binning[0] should contain the name of the binning.
+					exemple:
+						["JPSI_PT", 0., 4000., 8000.]
+					Could also be 2D :
+						[["JPSI_PT", 0., 4000., 8000.], ["JPSI_P", 0., 4000., 8000.] ]
 		"""
 				
 		# centrality percentage based on VELO cluster cut
@@ -64,10 +61,14 @@ class AnnaMuMuFitter:
 		}
 
 		self._mass_map = {
-			"JPsi": ROOT.RooRealVar('JPsi_mass', 'J/psi(1S) mass', 3.0, 3.2),
-			"PsiP": ROOT.RooRealVar('PsiP_mass', 'Psi(2S) mass', 3.6, 3.8),
-			"Upsilon": ROOT.RooRealVar('Upsilon_mass', 'Upsilon (1S) mass', 8.5, 10.5),
-			"UpsilonPrime": ROOT.RooRealVar('UpsilonPrime_mass', 'Upsilon (2S) mass', 9.0, 11.)
+			"JPsi": ROOT.RooRealVar(
+				'JPsi_mass', 'J/psi(1S) mass', 3.0, 3.2),
+			"PsiP": ROOT.RooRealVar(
+				'PsiP_mass', 'Psi(2S) mass', 3.6, 3.8),
+			"Upsilon": ROOT.RooRealVar(
+				'Upsilon_mass', 'Upsilon (1S) mass', 8.5, 10.5),
+			"UpsilonPrime": ROOT.RooRealVar(
+				'UpsilonPrime_mass', 'Upsilon (2S) mass', 9.0, 11.)
 		}
 
 		self._fit_attribute = None  # dict()
@@ -85,8 +86,15 @@ class AnnaMuMuFitter:
 		
 	# ______________________________________
 	def CheckBinning(self, binning):
-		""" 
-		Check binning format
+		"""Check binning format
+		
+		Fiew tests to check if binning pass several conditions
+		
+		Arguments:
+			binning {list{}}
+		
+		Returns:
+			bool -- Binning pass the conditions or not
 		"""
 
 		ok = True
@@ -131,10 +139,11 @@ class AnnaMuMuFitter:
 			if ok is True:
 				for i, limit in enumerate(binning[1:-1]):
 					try:
-						assert limit < binning[i+2] 
+						assert limit < binning[i + 2] 
 					except AssertionError:
 						error(" Binning {} not order properly".format())
 						ok = False
+
 		else:
 			# Check binning size
 			try:
@@ -222,32 +231,37 @@ class AnnaMuMuFitter:
 
 	# ______________________________________
 	def DecodeFitType(self, fit_type):
-		"""
-		decode the string containing all the information for the fit to be done
+		"""Decode the string containing all 
+			the information for the fit to be performed.
 		
-		the fit_type is a combination of key=value pairs separated by ":".
+		The fit_type must be combination of key=value pairs separated by "|".
 		Default keys are available in self._key_value
 
-		e.g.
-		Func=gaus:rebin=2:range=2.3;4.7
-		Func=vwm+cb2:range=2;5:alphalow=5.2:alphahigh=6.2
-		
-		except from the Func key, all the other ones have default values
-		if the key is different from standard key value it is assumed
+		Appart from the [signal] and [bckgr] keys, others have default values.
+		If the key is different from standard key value it is assumed
 		to be the value for a parameter of the fit function.
+				
+		Arguments:
+			fit_type {srt{}} -- example : 
+				particle=JPsi|leaf=jpsi_M|range=2;5|signal=CB2_pdf|bckgr=Bkg_pdf
+		
+		Returns:
+			bool -- If the fit is correctly decoded 
 		"""
 
-		# Always reset the data member at each fittype
+		# Always reset the data member at each fit_type
 		self._fit_attribute = dict()
 		self._fit_key["range"] = [2., 5.],
 		self._fit_key["rebin"] = 1,
 		self._fit_key["weight"] = 1
 
 		if fit_type.count("signal") != 1 or fit_type.count("bckgr") != 1:
-			error("DecodeFitType: Cannot decode type. Expecting 1 entries with 'signal' and 'bckgr, found {} and {}".format(
-				fit_type.count("signal"),
-				fit_type.count("bckgr")
-			))
+			error(
+				"""DecodeFitType: Cannot decode type. 
+				Expecting 1 entries with 'signal' and 'bckgr, found {} and {}"""
+				.format(
+					fit_type.count("signal"),
+					fit_type.count("bckgr")))
 			return False
 
 		# Check that keys appear only once in the string
@@ -277,21 +291,31 @@ class AnnaMuMuFitter:
 		return True
 
 	# ______________________________________
-	def Fit(self, tchain, leaf, centrality, cuts, fit_types, option):
-		"""[summary]
+	def Fit(self, tchain, leaf, centrality, cut, fit_types, option):
+		"""The main fit method
 		
-		[description]
-		
+		Histogrames are retrieved according to the cut we apply 
+		(all combinations of centrality/cut/self._binning).
+
+		Each histos is fitted for all fit_types and stored in an
+		AnnaMuMuResult class ( referred as subresults in the code).
+
+		All subresults for a given binning are stored again in a 
+		AnnaMuMuResult class ( referred as result in the code).
+
+		Finally, all results are stored in an AnnaMuMuSpectra class
+		that is returned at the end of the method.	
+
 		Arguments:
-			tchain {[type]} -- [description]
-			leaf {[type]} -- [description]
-			centrality {[type]} -- [description]
-			cuts {[type]} -- [description]
-			fit_types {[type]} -- [description]
-			option {[type]} -- [description]
+			tchain {TChain{}} 
+			leaf {str{}} 
+			centrality {str{}} 
+			cut {str{}} 
+			fit_types {list{}} 
+			option {str{}} 
 		
 		Returns:
-			[type] -- [description]
+			AnnaMuMuSpectra{} -- storage class for a results
 		"""
 
 		# The spectra that will be return
@@ -299,9 +323,9 @@ class AnnaMuMuFitter:
 			name=self._particle_name + "_" + self.GetBinType(),
 			title=self._particle_name + "_" + self.GetBinType())
 
-		# Get list of histograms (one per cuts)
+		# Get list of histograms (one per cut)
 		print(' --- try to get histos ...')
-		histos = self.GetHistos(tchain, leaf, centrality, cuts)
+		histos = self.GetHistos(tchain, leaf, centrality, cut)
 		print(' --- histos retrived ...')
 		debug("Fit: histos = {}".format(histos))
 
@@ -332,27 +356,29 @@ class AnnaMuMuFitter:
 			# Finally add result to spectra
 			added_result += spectra.AdoptResult(annaresult, self.GetBinsAsString()[i])
 				
-		
 		print(
-			'number of results added for {} : {}'
-			.format(spectra.GetName(), added_result)
-		)
+			"""number of results added for {} : {}"""
+			.format(spectra.GetName(), added_result))
 
 		return spectra
 
 	# ______________________________________
 	def FitHisto(self, fit_methods, histo):
-		"""Fit Histograme
+		"""Fit Histogram for all fit_methods.
 		
 		The result is stored in a AnnaMuMuResult
 		
 		Arguments:
-			fitmethod {[type]} -- fit configuration string
-			histo {[type]} -- histo to be fitted
+			fit_methods {list{}} -- fit configuration string
+			histo {TH1{}} -- histo to be fitted
+		
+		Returns:
+			list{} -- contains all the AnnaMuMuResults
 		"""
 
 		try:
 			assert histo != None
+
 		except AssertionError:
 			error("Cannot get histo")
 			return None
@@ -406,6 +432,7 @@ class AnnaMuMuFitter:
 
 	# ______________________________________
 	def GetBinType(self):
+		
 		if self._2D: 
 			return str(self._binning[0][0] + '--' + self._binning[1][0])
 		else:
@@ -432,7 +459,7 @@ class AnnaMuMuFitter:
 			]
 
 	# ______________________________________
-	def GetBinsAsString(self, ):
+	def GetBinsAsString(self):
 
 		if self._2D is True:
 			return [ 	
@@ -454,17 +481,20 @@ class AnnaMuMuFitter:
 			]
 
 	# ______________________________________
-	def GetHistos(self, tchain, leaf, centrality, cuts):
-		"""[summary]
+	def GetHistos(self, tchain, leaf, centrality, cut):
+		"""Retrieve list of histograms
 		
-		[description]
+		All histograms are projected from the TChain
+		according to each combination of centrality/cut/leaf/binning.
 		
 		Arguments:
-			bintype {[type]} -- [description]
-			bin_limits {[type]} -- [description]
-			leaf {[type]} -- [description]
-			centrality {[type]} -- [description]
-			cuts {[type]} -- [description]
+			tchain {TChain{}} -- 
+			leaf {str{}} -- 
+			centrality {str{}} -- 
+			cut {str{}} -- 
+		
+		Returns:
+			list{} -- contains al histograms
 		"""
 
 		histo_list = list()
@@ -478,12 +508,11 @@ class AnnaMuMuFitter:
 			error("GetHistos: cannot find leaf {}".format(leaf))
 			return None
 
-		# This is just sick ...
+		# This is just sweet :)
 		histo_cuts = [ 
-			self.ConfigureCuts(centrality, cuts, bintype, bin_limits)
+			self.ConfigureCuts(centrality, cut, bintype, bin_limits)
 			for bin_limits in bin_all
 		]
-
 		debug("GetHistos: histo_cuts : {}".format(histo_cuts))
 
 		for i, histo_cut in enumerate(histo_cuts):
@@ -502,6 +531,7 @@ class AnnaMuMuFitter:
 			except ReferenceError:
 				error("GetHistos: could not get histo with cut {}".format(histo_cut))
 				continue
+
 			histo_list[i].SetName("{}_{}".format(leaf, bin_all[i])) 
 
 		return histo_list
