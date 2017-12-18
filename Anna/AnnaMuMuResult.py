@@ -3,27 +3,27 @@
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
 
-from ROOT import TNamed
 import math
-from enum import Enum
 from logging import debug
 
 
 # ______________________________________
-class MergingMethod(Enum):
-	kMean = 0,
-	kSum = 1
+class MergingMethod():
+	def __init__(self):
+		self.kMean = 0
+		self.kSum = 1
 
 
 # ______________________________________
-class Index(Enum):
-	kValue = 0,
-	kStat = 1,
-	kSys = 2
+class Index():
+	def __init__(self):
+		self.kValue = 0
+		self.kStat = 1
+		self.kSys = 2
 
 
 # ______________________________________
-class AnnaMuMuResult(TNamed):
+class AnnaMuMuResult():
 	"""Store results for the Anna framework
 	
 	Base class to hold a set of results of the same quantity,
@@ -31,8 +31,6 @@ class AnnaMuMuResult(TNamed):
 	A AnnaMuMuResult can hold other AnnaMuMuResult, refered as
 	subresults later.
 	
-	Extends:
-		TNamed
 	"""
 
 	# ______________________________________
@@ -48,18 +46,19 @@ class AnnaMuMuResult(TNamed):
 		"""
 
 		# General for all AnnaMuMuResult
-		TNamed.__init__(self, name, title)
+		self.name = name
+		self.title = title
 		self._subresults = None  # dict()
 		self._subresults_to_be_incuded = None  # list()
 		
 		# How to merge quantity for subresults 
-		self._mergingMethod = MergingMethod  
+		self._mergingMethod = MergingMethod()  
 		self._resultMergingMethod = self._mergingMethod.kMean
 		
 		# Will be define only if self is a sub-result
 		self._binning = None
 		self._histo = histo
-		self._index = Index
+		self._index = Index()
 		self._map = None
 		self._weigth = 1.
 
@@ -248,6 +247,10 @@ class AnnaMuMuResult(TNamed):
 				return None
 
 	# ______________________________________
+	def GetName(self):
+		return self.name
+
+	# ______________________________________
 	def GetRMS(self, name, subresult_name):
 		"""Compute the rms of the subresults.
 		
@@ -364,6 +367,10 @@ class AnnaMuMuResult(TNamed):
 		return subresult_name_list
 
 	# ______________________________________
+	def GetTitle(self):
+		return self.title
+
+	# ______________________________________
 	def GetValue(self, name, subresult_name):
 		"""Get a value (either directly or by computing the mean of the subresults).
 				
@@ -465,6 +472,9 @@ class AnnaMuMuResult(TNamed):
 				return None
 
 			return sm
+
+	def GetWeight(self):
+		return self._weigth
 
 	# ______________________________________
 	def HasValue(self, name, subresult_name):

@@ -3,28 +3,28 @@
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
 
-from ROOT import TNamed
+from ROOT import TNamed, TObjArray
 from logging import debug as debug
 from logging import error as error
 
 
 
-class AnnaMuMuSpectra(TNamed):
+class AnnaMuMuSpectra():
 	"""Container for AnnaMuMuResult
 	
 	AnnaMuMuResults are stored according to a specific binning into a TObjArray.
 	
 	Extends:
-		TName
+		TNamed
 	"""
 
 	# ______________________________________
 	def __init__(self, name, title):
 		""" cstr """
 
-		TNamed.__init__(self, name, title)
+		self.name = name 
+		self.title = title
 		self._results = dict()  	# where are stored the AnnaMuMuResults
-		self._weight = 1.0  		# results weights
 
 	# ______________________________________
 	def AdoptResult(self, result, bin):
@@ -48,6 +48,14 @@ class AnnaMuMuSpectra(TNamed):
 		else: 
 			print(" --- result {} adopted !".format(result.GetName()))
 			return 1
+
+	# ______________________________________
+	def GetName(self):
+		return self.name
+
+	# ______________________________________
+	def GetTitle(self):
+		return self.title
 
 
 # =============================================================================

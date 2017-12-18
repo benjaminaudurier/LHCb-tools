@@ -5,14 +5,15 @@
 from .AnnaMuMuConfig import AnnaMuMuConfig
 from .AnnaMuMuFitter import AnnaMuMuFitter
 from logging import debug, error, info
-from ROOT import TChain, TFile, gDirectory
+from ROOT import TChain, TFile
+import Ostap.ZipShelve as DBASE
 import os.path
 
 
 class AnnaMuMuFacade:
 	"""
 	The framework is meant to work inside the LHCb framework 
-	as it relies on OSTAP for the fits.
+	as it relies on OSTAP for the fits and the saving data.
 	So, prior to import this module, the user must be sure to be 
 	in an Ostap session (lb-run Bender/latest ostap).
 
@@ -63,10 +64,10 @@ class AnnaMuMuFacade:
 
 	# ______________________________________
 	def AdoptResult(self, result, result_path):
-		"""Add result to TFile result.
+		"""Add result to RootShelve file result.
 		
-		The method create / get a TFile in the local directory
-		called AnnaResults.root.
+		The method create / get a RootShelve file in the local directory
+		called AnnaResults.
 		
 		Arguments:
 			result {[type]} -- must inherit from TObject
@@ -74,37 +75,26 @@ class AnnaMuMuFacade:
 		"""
 
 		# Create / get results file in the local directory """
-		f = None
-		if os.path.isfile('./AnnaResults.root'):
-			print("AdoptResult: Openning File ...")
-			f = TFile.Open('AnnaResults.root', 'update')
+		
+		db = DBASE.open('AnnaMuMu')
 
-		else:
-			print("AdoptResult: Creating Result File ...")
-			f = TFile.Open('AnnaResults.root', 'recreate')
-
-		if result != None:
+		if db != None:
 			debug('AdoptResult: result : {}'.format(result))
 
-			# Check if directory exist, otherwise create it
-			print('Try to create directory in {}'.format(result_path))
-			f.mkdir(result_path)
-
-			# Move to directory
-			move_to_dir = f.cd(result_path)
-			if move_to_dir is False:
-				error("AdoptResult: Cannot move to dir {}".format(result_path))
-				return
-
 			# Check if file exists
-			o = gDirectory.Get(result.GetName())
+			try:
+				o = db[str(result_path)]
+			except KeyError:
+				print("No object in {}/{}".format(result_path, result.GetName()))
+				o = None
+
 			if o != None:
 				print("Replacing {}/{}".format(result_path, result.GetName()))
-				gDirectory.Delete('{};*'.format(result.GetName()))
+				del o
 
-			# Write result
-			adoptOK = result.Write()
-			if adoptOK != 0:
+
+			db[str(result_path)] = result 
+			if db[str(result_path)] != None:
 				print("+++result {} adopted".format(result.GetName()))
 			
 			else:
@@ -112,10 +102,66 @@ class AnnaMuMuFacade:
 				return
 
 		else: 
-			error("AdoptResult: Error creating result")
+			error("AdoptResult: Error creating result file")
 			return
 
-		f.Close()
+	# # ______________________________________
+	# def AdoptResult(self, result, result_path):
+	# 	"""Add result to TFile result.
+		
+	# 	The method create / get a TFile in the local directory
+	# 	called AnnaResults.root.
+		
+	# 	Arguments:
+	# 		result {[type]} -- must inherit from TObject
+	# 		result_path {[type]} -- path inside AnnaResults.root
+	# 	"""
+
+	# 	# Create / get results file in the local directory """
+	# 	f = None
+	# 	if os.path.isfile('./AnnaResults.root'):
+	# 		print("AdoptResult: Openning File ...")
+	# 		f = TFile.Open('AnnaResults.root', 'update')
+
+	# 	else:
+	# 		print("AdoptResult: Creating Result File ...")
+	# 		f = TFile.Open('AnnaResults.root', 'recreate')
+
+	# 	print(type(result))
+
+	# 	if result != None:
+	# 		debug('AdoptResult: result : {}'.format(result))
+
+	# 		# Check if directory exist, otherwise create it
+	# 		print('Try to create directory in {}'.format(result_path))
+	# 		f.mkdir(result_path)
+
+	# 		# Move to directory
+	# 		move_to_dir = f.cd(result_path)
+	# 		if move_to_dir is False:
+	# 			error("AdoptResult: Cannot move to dir {}".format(result_path))
+	# 			return
+
+	# 		# Check if file exists
+	# 		o = gDirectory.Get(result.GetName())
+	# 		if o != None:
+	# 			print("Replacing {}/{}".format(result_path, result.GetName()))
+	# 			gDirectory.Delete('{};*'.format(result.GetName()))
+
+	# 		# Write result
+	# 		adoptOK = result.Write()
+	# 		if adoptOK != 0:
+	# 			print("+++result {} adopted".format(result.GetName()))
+			
+	# 		else:
+	# 			error("AdoptResult: Could not adopt result {}".format(result.GetName()))
+	# 			return
+
+	# 	else: 
+	# 		error("AdoptResult: Error creating result")
+	# 		return
+
+	# 	f.Close()
 
 	# ______________________________________
 	def DrawMinv(self, particle_name="jpsi"):
