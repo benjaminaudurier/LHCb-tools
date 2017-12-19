@@ -46,8 +46,16 @@ class AnnaMuMuSpectra():
 			return 0
 		
 		else: 
-			print(" --- result {} adopted !".format(result.GetName()))
+			print(" --- result {} (bin {}) adopted !".format(result.GetName(), str(bin)))
 			return 1
+
+	# ______________________________________
+	def GetBins(self):
+		return self._results.keys()
+	
+	# ______________________________________
+	def GetResults(self):
+		return self._results
 
 	# ______________________________________
 	def GetName(self):

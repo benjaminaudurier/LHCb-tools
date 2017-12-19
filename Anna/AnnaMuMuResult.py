@@ -54,13 +54,14 @@ class AnnaMuMuResult():
 		# How to merge quantity for subresults 
 		self._mergingMethod = MergingMethod()  
 		self._resultMergingMethod = self._mergingMethod.kMean
-		
-		# Will be define only if self is a sub-result
-		self._binning = None
-		self._histo = histo
 		self._index = Index()
 		self._map = None
-		self._weigth = 1.
+		
+		# Will be define only if self is a sub-result
+		self.binning = None
+		self.histo = histo
+		self.frame = None
+		self.weigth = 1.
 
 	# ______________________________________
 	def AdoptSubResult(self, result_list):
@@ -474,7 +475,7 @@ class AnnaMuMuResult():
 			return sm
 
 	def GetWeight(self):
-		return self._weigth
+		return self.weigth
 
 	# ______________________________________
 	def HasValue(self, name, subresult_name):
@@ -569,7 +570,7 @@ class AnnaMuMuResult():
 		print("{} {} {}".format(
 			self.GetName(),
 			self.GetTitle(),
-			" WEIGHT {}".format(self._weigth)) if self._weigth > 0.0 else "" 
+			" WEIGHT {}".format(self.weigth)) if self.weigth > 0.0 else "" 
 		)
 
 		if self._subresults is not None and len(self._subresults) > 1:
@@ -687,7 +688,7 @@ class AnnaMuMuResult():
 			self.Set(key, value * w, error * w, rms * w)
 
 	# ______________________________________
-	def Set(self, name, value, errorStat, rms):
+	def Set(self, name, value, errorStat, rms=0.):
 		""" 
 		Set a (value,error) pair with a given name
 		"""
@@ -695,13 +696,13 @@ class AnnaMuMuResult():
 			self._map = dict()
 		try:
 			p = self._map[name]
-		except NameError:
+		except KeyError:
 			p = [value, errorStat, rms]
 			self._map[name] = p
 
 		p[self._index.kValue] = value
-		p[self._index.kErrorStat] = errorStat
-		p[self._index.kRMS] = rms
+		p[self._index.kStat] = errorStat
+		p[self._index.kSys] = rms
 
 	# ______________________________________
 	def SubResult(self, subresult_name):

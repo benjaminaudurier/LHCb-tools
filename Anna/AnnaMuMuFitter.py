@@ -7,10 +7,10 @@ from .AnnaMuMuSpectra import AnnaMuMuSpectra
 from .AnnaMuMuResult import AnnaMuMuResult
 import ROOT
 # OSTAP modules
-# from Ostap.PyRoUts import *
-# import Ostap.FitModels as Models
+from Ostap.PyRoUts import *
+import Ostap.FitModels as Models
 # Python modules
-from logging import debug, error, warning
+from logging import debug, error, warning, info
 
 
 class AnnaMuMuFitter:
@@ -33,7 +33,7 @@ class AnnaMuMuFitter:
 						[["JPSI_PT", 0., 4000., 8000.], ["JPSI_P", 0., 4000., 8000.] ]
 		"""
 				
-		# centrality percentage based on VELO cluster cut
+		# Centrality percentage based on VELO cluster cut
 		self._centrality = {
 			"branch": ["VELOTHITS"], 
 			"90_100": [0, 1311],
@@ -50,38 +50,33 @@ class AnnaMuMuFitter:
 			print("Binning is not good ...")
 			return None
 
-		# several dictionnaries used for fit
-		# WHATCHOUT WHEN TOUCHING THIS !
+		# Several dictionnaries used for fit
+		# WHATCH OUT WHEN TOUCHING THIS !
 		self._fit_key = {
 			"signal": "",
 			"bckgr": "",
-			"range": None,
-			"rebin": None,
 			"weight": None
 		}
 
+		# Mass map
 		self._mass_map = {
 			"JPsi": ROOT.RooRealVar(
-				'JPsi_mass', 'J/psi(1S) mass', 3.0, 3.2),
+				'JPsi_mass', 'J/psi(1S) mass', 3000., 3300.),
 			"PsiP": ROOT.RooRealVar(
-				'PsiP_mass', 'Psi(2S) mass', 3.6, 3.8),
+				'PsiP_mass', 'Psi(2S) mass', 3600., 3800.),
 			"Upsilon": ROOT.RooRealVar(
-				'Upsilon_mass', 'Upsilon (1S) mass', 8.5, 10.5),
+				'Upsilon_mass', 'Upsilon (1S) mass', 8500., 10500.),
 			"UpsilonPrime": ROOT.RooRealVar(
-				'UpsilonPrime_mass', 'Upsilon (2S) mass', 9.0, 11.)
+				'UpsilonPrime_mass', 'Upsilon (2S) mass', 9000., 11000.)
 		}
 
-		self._fit_attribute = None  # dict()
-
+		# Set particule name
 		try:
 			assert particle in self._mass_map.keys()
 		except AssertionError:
-			error(
-				'Wrong entry for particle ({}),\
-				possibles are {}'.self._mass_map.keys()
-			)
+			error('''Wrong entry for particle ({}),
+				possibles are {}'''.self._mass_map.keys())
 			return None
-
 		self._particle_name = particle 
 		
 	# ______________________________________
@@ -250,9 +245,6 @@ class AnnaMuMuFitter:
 		"""
 
 		# Always reset the data member at each fit_type
-		self._fit_attribute = dict()
-		self._fit_key["range"] = [2., 5.],
-		self._fit_key["rebin"] = 1,
 		self._fit_key["weight"] = 1
 
 		if fit_type.count("signal") != 1 or fit_type.count("bckgr") != 1:
@@ -278,15 +270,12 @@ class AnnaMuMuFitter:
 			key, value = self.GetKeyValue(pair, '=')
 
 			try:
-				assert key is not None or value is not None
+				assert key != None or value != None
 			except AssertionError:
 				print('Error : Invalid key=value pair ' + pair)
 			debug("key = %s, value = %s".format(key, value))
 
-			if key in self._fit_key.keys():
-				self._fit_key[key] = value
-			else:
-				self._fit_attribute[key] = value
+			self._fit_key[key] = value
 		
 		return True
 
@@ -331,7 +320,7 @@ class AnnaMuMuFitter:
 
 		# Construct our AnnaMuMuRestult for each histo or bins
 		annaresults = [
-			AnnaMuMuResult(self.GetBinsAsString()[i], self.GetBinsAsString()[i]) 
+			AnnaMuMuResult(self.GetBinType(), self.GetBinsAsString()[i]) 
 			for i in range(0, len(histos))
 		]
 
@@ -350,8 +339,8 @@ class AnnaMuMuFitter:
 				debug("Fit: subresult = {}".format(subresult))
 				added_subresult += annaresult.AdoptSubResult(subresult)
 				print(
-					' ----- number of subresults fitted for {} : {}'
-					.format(annaresult.GetName(), added_subresult)
+					' ----- number of subresults fitted for {} - {} : {}'
+					.format(annaresult.GetName(), self.GetBinsAsString()[i], added_subresult)
 				)
 			# Finally add result to spectra
 			added_result += spectra.AdoptResult(annaresult, self.GetBinsAsString()[i])
@@ -378,55 +367,61 @@ class AnnaMuMuFitter:
 
 		try:
 			assert histo != None
-
 		except AssertionError:
 			error("Cannot get histo")
 			return None
 
 		subresult_list = list()
+		print(""" \n========= > Fit histo {} < ========= """.format(histo.GetName()))
 
 		for i, fit_method in enumerate(fit_methods):
 			# Get the fit configuration
 			self.DecodeFitType(fit_method)
 
+			# try to get the fit functions from Ostap
+			try:
+				getattr(Models, self._fit_key['signal'])
+			except AttributeError:
+				error('''FitHisto: Cannot find {} in Ostap.FitModels
+					for signal function'''.format(self._fit_key['signal']))
+				continue
+			try:
+				background = getattr(Models, self._fit_key['bckgr'])
+			except AttributeError:
+				error('''FitHisto :Cannot find {} in Ostap.FitModels
+					for background function'''.format(self._fit_key['bckgr']))
+				continue
+
+			# Configure functions
+			signal = getattr(Models, self._fit_key['signal'])(
+				'sig',
+				self._mass_map[self._particle_name].getMin(),
+				self._mass_map[self._particle_name].getMax(),
+				mass=self._mass_map[self._particle_name])
+
+			background = getattr(Models, self._fit_key['bckgr'])(
+				'bckgr',
+				self._mass_map[self._particle_name])
+		
+			model = Models.Fit1D(signal=signal, background=background)
+			self.SetAdditionalAttributeToModelFunction(model)
+
+			print(""" \n------- > with {} + {} (weight = {} ) \n""".format(
+				self._fit_key['signal'], self._fit_key['bckgr'],  self._fit_key['weight']))
+			result, frame = model.fitTo(histo, silent=True, draw=False, refit=True)
+			debug("{}".format(result))
+
 			# Create the AnnaMuMuResult
 			sr_name = "{}_{}".format(fit_method, histo.GetName())
 			sr = AnnaMuMuResult(name=sr_name, title=histo.GetTitle(), histo=histo)
+			sr.weigth = self._fit_key['weight']
+			sr.frame = frame
+			for key in result.parameters().keys():
+				sr.Set(key, result(key)[0], result(key)[1])
+			sr.Set("FitResult", result.status(), 0., 0.)
+			sr.Set("CovMatrixStatus", result.covQual(), 0., 0.)
+
 			subresult_list.append(sr)
-
-			# try to get the fit functions from Ostap
-			# try:
-				# signal = getattr(Models, self._fit_key['Sig'] + "_pdf")
-			# except AttributeError:
-				# error(
-		# 			'Cannot find {} in Ostap.FitModels\
-		# 			for signal function'.format(self._fit_key['Sig'])
-		# 		)
-		# 	try:
-		# 		background = getattr(Models, self._fit_key['Bck'] + "_pdf")
-		# 	except AttributeError:
-		# 		error(
-		# 			'Cannot find {} in Ostap.FitModels\
-		# 			for background function'.format(self._fit_key['Bck'])
-		# 		)
-
-		# 	# Configure functions
-		# 	signal.name = 'sig'
-		# 	signal.mn = self._mass_map[self._particle_name].getMin()
-		# 	signal.mx = self._mass_map[self._particle_name].getMax()
-		# 	signal.mass = self._mass_map[self._particle_name]
-
-		# 	background.name = 'Bck'
-		# 	signal.mass = self._mass_map[self._particle_name]
-
-		# 	self.SetAdditionalAttributeToFunction(signal, background) #TODO: To write
-
-		# 	model = Models.Fit1D(
-		# 		signal=signal,
-		# 		background=background
-		# 	)
-
-		# 	r, f = model_cb.fitTo(histo)
 
 		return subresult_list
 
@@ -434,9 +429,9 @@ class AnnaMuMuFitter:
 	def GetBinType(self):
 		
 		if self._2D: 
-			return str(self._binning[0][0] + '--' + self._binning[1][0])
+			return self._binning[0][0] + '--' + self._binning[1][0]
 		else:
-			return str(self._binning[0])
+			return self._binning[0]
 
 	# ______________________________________
 	def GetBinsAsList(self):
@@ -463,8 +458,7 @@ class AnnaMuMuFitter:
 
 		if self._2D is True:
 			return [ 	
-				"{}_{}_{}_{}_{}".format(
-					self.GetBinType(),
+				"{}_{}_{}_{}".format(
 					self._binning[0][i], self._binning[0][i + 1], 
 					self._binning[1][j], self._binning[1][j + 1]
 				) 
@@ -473,8 +467,7 @@ class AnnaMuMuFitter:
 			]
 		else:
 			return [
-				"{}_{}_{}".format(
-					self.GetBinType(),
+				"{}_{}".format(
 					self._binning[i], self._binning[i + 1]
 				)
 				for i in range(1, len(self._binning[1:]))
@@ -544,7 +537,59 @@ class AnnaMuMuFitter:
 
 		split_pair = pair.strip()
 		split_pair = split_pair.split(separator)
-		return split_pair[0], split_pair[1]		
+		return split_pair[0], split_pair[1]
+
+	# ______________________________________
+	def SetAdditionalAttributeToModelFunction(self, model):
+		"""Run over self._fit_key and try to configure
+		fit model if possible
+				
+		Arguments:
+			model {Ostap.FitModels} -- 
+		"""
+
+		# First check we have arguments
+		attributes_set = list()
+
+		# Check if attribute belong to the signal part and set it if true
+		for i, attribute in enumerate(self._fit_key.keys()):
+			try:
+				getattr(model.signal, attribute)
+			except AttributeError:
+				debug(
+					'''No {} in the signal part of the model'''
+					.format(attribute))
+				continue
+			setattr(model.signal, attribute, self._fit_key[attribute])
+			attributes_set.append('signal.'+attribute)
+
+		# Check if attribute belong to the background part and set it if true
+		for attribute in self._fit_key.keys():
+			try:
+				getattr(model.background, attribute)
+			except AttributeError:
+				debug(
+					'''No {} in the background part of the model'''
+					.format(attribute))
+				continue
+			setattr(model.background, attribute, self._fit_key[attribute])
+			attributes_set.append('background.'+attribute)
+
+		# Check if attribute belong to the model itself and set it if true
+		for attribute in self._fit_key.keys():
+			try:
+				getattr(model, attribute)
+			except AttributeError:
+				debug(
+					'''No {} in the background part of the model'''
+					.format(attribute))
+				continue
+			setattr(model, attribute, self._fit_key[attribute])
+			attributes_set.append('model.'+attribute)
+
+		debug(
+			"SetAdditionalAttributeToModelFunction: Additionnal Attributes sets : {}"
+			.format(attributes_set))
 
 
 # =============================================================================
