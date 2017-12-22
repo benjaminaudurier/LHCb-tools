@@ -130,13 +130,11 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			if ok_lumi == False:
 				info("entry {} does not pass the luminosity cut".format(entry_number))
 				continue
+
 			# Prepare Data
 			rho = v_OWNPV.Perp()
 			v_OWNPV -= v_ENDVERTEX
-			# in meters
-			dZ = (
-				getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') - 
-				getattr(entry, self.mother_leaf + '_OWNPV_Z') ) * 1e-3
+			dZ = (getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') - getattr(entry, self.mother_leaf + '_OWNPV_Z')) * 1e-3
 			tZ = dZ * 3096.916 / (getattr(entry, self.mother_leaf + '_PZ') * TMath.C())
 
 			data = [
@@ -170,9 +168,10 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 				data[10],
 				data[11],
 				data[12],
-				data[13])
+				data[13],
+				data[14])
 		
-		print(' --- Done ! Run over {} events ! Returning tuple ...'.format(entry_number))
+		print(' --- Done ! Ran over {} events !'.format(entry_number))
 		return ntuple
 
 	# ______________________________________
@@ -208,6 +207,16 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		except AttributeError:
 			error("AnnaMuMuSparseJpsiPbPb:IsInLuminosityRegion: No info ENDVERTEX_Z in entry {}".format(entry_number))
 			return False, None, None
+		try:
+			ENDVERTEX_CHI2 = getattr(entry, self.mother_leaf + '_ENDVERTEX_CHI2')
+		except AttributeError:
+			error("AnnaMuMuSparseJpsiPbPb:IsInLuminosityRegion: No info ENDVERTEX_CHI2 in entry {}".format(entry_number))
+			return False, None, None
+		try:
+			ENDVERTEX_NDOF = getattr(entry, self.mother_leaf + '_ENDVERTEX_NDOF')
+		except AttributeError:
+			error("AnnaMuMuSparseJpsiPbPb:IsInLuminosityRegion: No info ENDVERTEX_NDOF in entry {}".format(entry_number))
+			return False, None, None
 
 		if OWNPV_Z < -200. or OWNPV_Z > 200.: 
 			info("AnnaMuMuSparseJpsiPbPb:IsInLuminosityRegion: OWNPV out of range")
@@ -215,6 +224,10 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		if ENDVERTEX_Z < -200. or ENDVERTEX_Z > 200.:
 			info("AnnaMuMuSparseJpsiPbPb:IsInLuminosityRegion: ENDVERTEX out of range")
 			return False, None, None
+
+		# goodness of the dimuon vertex
+		if TMath.Prob(ENDVERTEX_CHI2, ENDVERTEX_NDOF) < 0.5/100.0:
+			return  False, None, None
 
 		v_OWNPV = TVector3(OWNPV_X, OWNPV_Y, OWNPV_Z)
 		v_ENDVERTEX = TVector3(ENDVERTEX_X, ENDVERTEX_Y, ENDVERTEX_Z)

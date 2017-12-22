@@ -42,7 +42,7 @@ class AnnaMuMuFitter:
 			"60_70": [5580, 9685],
 			"50_60": [9685, 15417],
 			"40_50": [15417, 22473],
-			"70_90": [9685, 1311]}
+			"70_90": [1311, 9685]}
 
 		# Adopt binning
 		self._binning, self._2D = self.CheckBinning(binning)
