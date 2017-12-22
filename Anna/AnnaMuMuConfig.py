@@ -20,8 +20,9 @@ class AnnaMuMuConfig:
 			"Centrality", 
 			"CutCombination", 
 			"FitType",
-			"Leaf"			
-		)
+			"MotherLeaf",
+			"MuplusLeaf",
+			"MuminusLeaf")
 
 	# ______________________________________
 	def ReadFromFile(self, configfile=""):
@@ -30,7 +31,7 @@ class AnnaMuMuConfig:
 		All lines in the file should be written as <key> : <value>>
 		example:
 			#Centrality: ALL
-			Leaf: JPSI_M
+			MotherLeaf: JPSI_M
 			#CutCombination: 2.5<JPSI_Y&&JPSI_Y<4
 
 		Automatically skip empty line and line starting with '#'
@@ -79,12 +80,20 @@ class AnnaMuMuConfig:
 		return self._map["FitType"]
 
 	# ______________________________________
-	def GetLeaf(self):
-		return self._map["Leaf"]
+	def GetMotherLeaf(self):
+		return self._map["MotherLeaf"]
+
+	# ______________________________________
+	def GetMuonPlusLeaf(self):
+		return self._map["MuplusLeaf"]
+
+	# ______________________________________
+	def GetMuonMinusLeaf(self):
+		return self._map["MuminusLeaf"]
 
 	# ______________________________________
 	def GetDefaultEntry(self, key_name):
-			return "#"
+		return "#"
 			
 	# ______________________________________
 	def PrintKey(self):

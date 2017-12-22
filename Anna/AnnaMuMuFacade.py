@@ -2,14 +2,22 @@
 #  @class AnnaMuMuFacade
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
+
+# From the framework
 from .AnnaMuMuConfig import AnnaMuMuConfig
 from .AnnaMuMuFitter import AnnaMuMuFitter
-from logging import debug, error, info
+# Tuple bank
+import TupleBank as TupleBank
+import TupleBank.AnnaMuMuTupleJpsiPbPb
+# ROOT and Ostap
 from ROOT import TChain, TFile
 import Ostap.ZipShelve as DBASE
+from Ostap.PyRoUts import *
+# Python
 import os.path
+from logging import debug, error, info
 
-
+# ______________________________________
 class AnnaMuMuFacade:
 	"""
 	The framework is meant to work inside the LHCb framework 
@@ -106,6 +114,46 @@ class AnnaMuMuFacade:
 			return
 
 	# ______________________________________
+	def CreateFilteredTuple(self, tuple_name='JpsiPbPb'):
+		"""Fill and save a filtered tuple from self._chain after applying cuts
+		on leafs. 
+		"""
+
+		print(" ================================================================ ")
+		print("     CreateFilteredTuple with Tuple {} ".format(tuple_name))
+		print(" ================================================================ ")
+
+		for mother_leaf in self._configfile.GetMotherLeaf():
+			if mother_leaf == "#": continue
+			for muplus_leaf in self._configfile.GetMuonPlusLeaf():
+				if muplus_leaf == "#": continue
+				for muminus_leaf in self._configfile.GetMuonMinusLeaf():
+					if muminus_leaf == "#": continue
+
+					dimuon_leaf = [muplus_leaf, muminus_leaf]
+
+					# get the module
+					try:
+						module = getattr(TupleBank, 'AnnaMuMuTuple{}'.format(tuple_name))
+					except AttributeError :
+						error('Cannot find AnnaMuMuTuple{} module'.format(tuple_name))
+
+					# Instance the object
+					try:
+						mumu_tuple = getattr(module, 'AnnaMuMuTuple{}'.format(tuple_name))(mother_leaf, dimuon_leaf)
+					except AttributeError :
+						error('Cannot find AnnaMuMuTuple{} instance'.format(tuple_name))
+
+					# Get the tuple
+					ntuple = mumu_tuple.GetTuple(self._tchain)
+
+					if ntuple != None:
+						self.AdoptResult(ntuple, 'Tuple/{}/{}'.format(mother_leaf, tuple_name))
+					else:
+						error("CreateFilteredTuple: Cannot get Tuple")
+						continue 
+
+	# ______________________________________
 	def DrawMinv(self, particle_name="jpsi"):
 		return
 
@@ -143,7 +191,7 @@ class AnnaMuMuFacade:
 
 		for centrality in self._configfile.GetCentrality():
 			for cut in self._configfile.GetCutCombination():
-				for leaf in self._configfile.GetLeaf():
+				for leaf in self._configfile.GetMotherLeaf():
 
 					if self._tchain != None:
 						spectrapath = "{}/FitParticle/{}/{}/{}".format(

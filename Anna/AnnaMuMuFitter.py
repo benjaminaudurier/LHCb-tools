@@ -10,7 +10,7 @@ import ROOT
 from Ostap.PyRoUts import *
 import Ostap.FitModels as Models
 # Python modules
-from logging import debug, error, warning, info
+from logging import debug, error, warning
 
 
 class AnnaMuMuFitter:
@@ -35,14 +35,14 @@ class AnnaMuMuFitter:
 				
 		# Centrality percentage based on VELO cluster cut
 		self._centrality = {
-			"branch": ["VELOTHITS"], 
+			"branch": "nVeloTracks", 
 			"90_100": [0, 1311],
 			"80_90": [1311, 3009],
 			"70_80": [3009, 5580],
 			"60_70": [5580, 9685],
 			"50_60": [9685, 15417],
-			"40_50": [15417, 22473]
-		}
+			"40_50": [15417, 22473],
+			"70_90": [9685, 1311]}
 
 		# Adopt binning
 		self._binning, self._2D = self.CheckBinning(binning)
@@ -51,24 +51,21 @@ class AnnaMuMuFitter:
 			return None
 
 		# Several dictionnaries used for fit
-		# WHATCH OUT WHEN TOUCHING THIS !
 		self._fit_key = {
 			"signal": "",
 			"bckgr": "",
-			"weight": None
-		}
+			"weight": None}
 
 		# Mass map
 		self._mass_map = {
 			"JPsi": ROOT.RooRealVar(
-				'JPsi_mass', 'J/psi(1S) mass', 3000., 3300.),
+				'JPsi_mass', 'J/psi(1S) mass', 3000., 3200.),
 			"PsiP": ROOT.RooRealVar(
 				'PsiP_mass', 'Psi(2S) mass', 3600., 3800.),
 			"Upsilon": ROOT.RooRealVar(
 				'Upsilon_mass', 'Upsilon (1S) mass', 8500., 10500.),
 			"UpsilonPrime": ROOT.RooRealVar(
-				'UpsilonPrime_mass', 'Upsilon (2S) mass', 9000., 11000.)
-		}
+				'UpsilonPrime_mass', 'Upsilon (2S) mass', 9000., 11000.)}
 
 		# Set particule name
 		try:
@@ -97,7 +94,7 @@ class AnnaMuMuFitter:
 		
 		# Check size
 		try:
-			assert len(binning) > 2
+			assert len(binning) >= 2
 		except AssertionError:
 			print("binning is too small")
 			ok = False
@@ -108,8 +105,8 @@ class AnnaMuMuFitter:
 				assert type(binning[1]) == list()
 			except AssertionError:
 				error(
-					" --- Wrong bin format ({}),\
-					should be list()".format(type(binning[1]))
+					""" --- Wrong bin format ({}),
+					should be list()""".format(type(binning[1]))
 				)
 				return False
 
@@ -124,10 +121,10 @@ class AnnaMuMuFitter:
 		if is2D is False:
 			# Check binning size
 			try:
-				assert len(binning[1:]) > 2
+				assert len(binning[1:]) >= 2
 			except AssertionError:
-				error("Not enought bins ({}),\
-				required at least 2".format(len(binning[1:])))
+				error(""" Not enought bins ({}),
+				required at least 2 """.format(len(binning[1:])))
 				ok = False
 
 			# Check binning ordening
@@ -142,16 +139,16 @@ class AnnaMuMuFitter:
 		else:
 			# Check binning size
 			try:
-				assert len(binning[0][1:]) > 2
+				assert len(binning[0][1:]) >= 2
 			except AssertionError:
-				error("Not enought bins ({}), \
-				required at least 2".format(len(binning[0][1:])))
+				error(""" Not enought bins ({}),
+				required at least 2 """.format(len(binning[0][1:])))
 				ok = False
 			try:
-				assert len(binning[1][1:]) > 2
+				assert len(binning[1][1:]) >= 2
 			except AssertionError:
-				error("Not enought bins ({}), \
-				required at least 2".format(len(binning[1][1:])))
+				error("""Not enought bins ({}),
+				required at least 2""".format(len(binning[1][1:])))
 				ok = False
 
 			# Check binning ordening
@@ -186,19 +183,11 @@ class AnnaMuMuFitter:
 		if self._2D is True:
 			bin_names = bintype.split('--')
 			cut_update = "{2} < {0} && {0} < {3} && {4} < {1} && {1} < {5}".format(
-				bin_names[0],
-				bin_names[1],
-				bin_limits[0],
-				bin_limits[1],
-				bin_limits[2],
-				bin_limits[3]
-			) 
+				bin_names[0], bin_names[1],
+				bin_limits[0], bin_limits[1], bin_limits[2], bin_limits[3]) 
 		else:
 			cut_update = "{1} < {0} && {0} < {2}".format(
-				bintype,
-				bin_limits[0],
-				bin_limits[1]
-			)
+				bintype, bin_limits[0], bin_limits[1])
 
 		add_centrality = True
 		try:
@@ -218,10 +207,12 @@ class AnnaMuMuFitter:
 			cut_update += " && {0}>{1} && {0}<{2}".format(
 				self._centrality["branch"],
 				self._centrality[centrality][0],
-				self._centrality[centrality][1]
-			) 
+				self._centrality[centrality][1]) 
 		if add_cut is True:
-			cut_update += " && {0}".format(cut) 
+			try:
+				cut_update += " && {0}".format(self._default_cut[cut]) 
+			except KeyError:
+				cut_update += " && {0}".format(cut)
 		return cut_update
 
 	# ______________________________________
@@ -321,8 +312,7 @@ class AnnaMuMuFitter:
 		# Construct our AnnaMuMuRestult for each histo or bins
 		annaresults = [
 			AnnaMuMuResult(self.GetBinType(), self.GetBinsAsString()[i]) 
-			for i in range(0, len(histos))
-		]
+			for i in range(0, len(histos))]
 
 		# Run over each AnnaResults (or bin or histos) and add subresults
 		added_result = 0
@@ -340,8 +330,7 @@ class AnnaMuMuFitter:
 				added_subresult += annaresult.AdoptSubResult(subresult)
 				print(
 					' ----- number of subresults fitted for {} - {} : {}'
-					.format(annaresult.GetName(), self.GetBinsAsString()[i], added_subresult)
-				)
+					.format(annaresult.GetName(), self.GetBinsAsString()[i], added_subresult))
 			# Finally add result to spectra
 			added_result += spectra.AdoptResult(annaresult, self.GetBinsAsString()[i])
 				
@@ -407,8 +396,8 @@ class AnnaMuMuFitter:
 			self.SetAdditionalAttributeToModelFunction(model)
 
 			print(""" \n------- > with {} + {} (weight = {} ) \n""".format(
-				self._fit_key['signal'], self._fit_key['bckgr'],  self._fit_key['weight']))
-			result, frame = model.fitTo(histo, silent=True, draw=False, refit=True)
+				self._fit_key['signal'], self._fit_key['bckgr'], self._fit_key['weight']))
+			result, frame = model.fitTo(histo, silent=True, draw=True, refit=True)
 			debug("{}".format(result))
 
 			# Create the AnnaMuMuResult
@@ -437,7 +426,8 @@ class AnnaMuMuFitter:
 	def GetBinsAsList(self):
 
 		if self._2D is True:
-			return [ 
+			return 
+			[
 				[
 					self._binning[0][i], self._binning[0][i + 1], 
 					self._binning[1][j], self._binning[1][j + 1]
@@ -446,12 +436,9 @@ class AnnaMuMuFitter:
 				for j in range(1, len(self._binning[1][1:]))
 			]
 		else:
-			return [
-				[
-					self._binning[i], self._binning[i + 1]
-				] 
-				for i in range(1, len(self._binning[1:]))
-			]
+			return 
+			[[self._binning[i], self._binning[i + 1]] 
+				for i in range(1, len(self._binning[1:]))]
 
 	# ______________________________________
 	def GetBinsAsString(self):
@@ -561,7 +548,7 @@ class AnnaMuMuFitter:
 					.format(attribute))
 				continue
 			setattr(model.signal, attribute, self._fit_key[attribute])
-			attributes_set.append('signal.'+attribute)
+			attributes_set.append('signal.' + attribute)
 
 		# Check if attribute belong to the background part and set it if true
 		for attribute in self._fit_key.keys():
@@ -573,7 +560,7 @@ class AnnaMuMuFitter:
 					.format(attribute))
 				continue
 			setattr(model.background, attribute, self._fit_key[attribute])
-			attributes_set.append('background.'+attribute)
+			attributes_set.append('background.' + attribute)
 
 		# Check if attribute belong to the model itself and set it if true
 		for attribute in self._fit_key.keys():
@@ -585,7 +572,7 @@ class AnnaMuMuFitter:
 					.format(attribute))
 				continue
 			setattr(model, attribute, self._fit_key[attribute])
-			attributes_set.append('model.'+attribute)
+			attributes_set.append('model.' + attribute)
 
 		debug(
 			"SetAdditionalAttributeToModelFunction: Additionnal Attributes sets : {}"

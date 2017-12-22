@@ -3,7 +3,6 @@
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30 
 
-from ROOT import TNamed, TObjArray
 from logging import debug as debug
 from logging import error as error
 
