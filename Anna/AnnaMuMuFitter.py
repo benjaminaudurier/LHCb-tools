@@ -35,7 +35,7 @@ class AnnaMuMuFitter:
 				
 		# Centrality percentage based on VELO cluster cut
 		self._centrality = {
-			"branch": "nVeloTracks", 
+			"branch": "nVeloClusters", 
 			"90_100": [0, 1311],
 			"80_90": [1311, 3009],
 			"70_80": [3009, 5580],
@@ -96,7 +96,7 @@ class AnnaMuMuFitter:
 		try:
 			assert len(binning) >= 2
 		except AssertionError:
-			print("binning is too small")
+			error("binning is too small")
 			ok = False
 
 		# Check if 2D binning
@@ -194,13 +194,13 @@ class AnnaMuMuFitter:
 			self._centrality[centrality]
 		except KeyError:
 			add_centrality = False
-			warning("ConfigureCuts: skip centrality cut ({})".format(centrality))
+			warning("skip centrality cut ({})".format(centrality))
 
 		add_cut = True
 		try:
 			assert cut != "#"
 		except AssertionError:
-			warning("ConfigureCuts: skip specific cut ({})".format(centrality))
+			warning("skip specific cut ({})".format(centrality))
 			add_cut = False
 
 		if add_centrality is True:
@@ -240,7 +240,7 @@ class AnnaMuMuFitter:
 
 		if fit_type.count("signal") != 1 or fit_type.count("bckgr") != 1:
 			error(
-				"""DecodeFitType: Cannot decode type. 
+				"""Cannot decode type. 
 				Expecting 1 entries with 'signal' and 'bckgr, found {} and {}"""
 				.format(
 					fit_type.count("signal"),
@@ -371,13 +371,13 @@ class AnnaMuMuFitter:
 			try:
 				getattr(Models, self._fit_key['signal'])
 			except AttributeError:
-				error('''FitHisto: Cannot find {} in Ostap.FitModels
+				error('''Cannot find {} in Ostap.FitModels
 					for signal function'''.format(self._fit_key['signal']))
 				continue
 			try:
 				background = getattr(Models, self._fit_key['bckgr'])
 			except AttributeError:
-				error('''FitHisto :Cannot find {} in Ostap.FitModels
+				error('''Cannot find {} in Ostap.FitModels
 					for background function'''.format(self._fit_key['bckgr']))
 				continue
 
@@ -485,7 +485,7 @@ class AnnaMuMuFitter:
 		try:
 			assert tchain.GetLeaf(leaf) != None
 		except AssertionError:
-			error("GetHistos: cannot find leaf {}".format(leaf))
+			error("cannot find leaf {}".format(leaf))
 			return None
 
 		# This is just sweet :)
@@ -493,7 +493,7 @@ class AnnaMuMuFitter:
 			self.ConfigureCuts(centrality, cut, bintype, bin_limits)
 			for bin_limits in bin_all
 		]
-		debug("GetHistos: histo_cuts : {}".format(histo_cuts))
+		debug("histo_cuts : {}".format(histo_cuts))
 
 		for i, histo_cut in enumerate(histo_cuts):
 			print(' --- Getting histo from leaf {} with cut {}'.format(leaf, histo_cut))
@@ -503,13 +503,13 @@ class AnnaMuMuFitter:
 			try:
 				assert ROOT.gDirectory.Get("histo") != None
 			except AssertionError:
-				error("GetHistos: cannot get histo from leaf {} ... continue".format(leaf))
+				error("cannot get histo from leaf {} ... continue".format(leaf))
 				continue
 
 			try:
 				histo_list.append(ROOT.gDirectory.Get("histo").Clone())
 			except ReferenceError:
-				error("GetHistos: could not get histo with cut {}".format(histo_cut))
+				error("could not get histo with cut {}".format(histo_cut))
 				continue
 
 			histo_list[i].SetName("{}_{}".format(leaf, bin_all[i])) 
@@ -574,9 +574,7 @@ class AnnaMuMuFitter:
 			setattr(model, attribute, self._fit_key[attribute])
 			attributes_set.append('model.' + attribute)
 
-		debug(
-			"SetAdditionalAttributeToModelFunction: Additionnal Attributes sets : {}"
-			.format(attributes_set))
+		debug("Additionnal Attributes sets : {}".format(attributes_set))
 
 
 # =============================================================================

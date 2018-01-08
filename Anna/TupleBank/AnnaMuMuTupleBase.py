@@ -50,15 +50,15 @@ class AnnaMuMuTupleBase:
 		general_mask = ''
 		if self.filter_mask['muon_mask'] != '': 
 			for leaf in self.dimuon_leafs:
-				for cut in self.filter_mask['muon_mask'].split('|'):
+				for cut in self.filter_mask['muon_mask'].split('**'):
 					general_mask += '{}_{}&&'.format(leaf, cut)
 
 		if self.filter_mask['mother_mask'] != '': 
-			for cut in self.filter_mask['mother_mask'].split('|'):
+			for cut in self.filter_mask['mother_mask'].split('**'):
 					general_mask += '{}_{}&&'.format(self.mother_leaf, cut)
 
 		if self.filter_mask['other'] != '': 
-			for cut in self.filter_mask['other'].split('|'):
+			for cut in self.filter_mask['other'].split('**'):
 					general_mask += '{}&&'.format(cut)
 
 		return general_mask[:-2]

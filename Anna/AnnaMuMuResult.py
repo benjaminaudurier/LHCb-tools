@@ -4,7 +4,7 @@
 #  @date   2017-11-30 
 
 import math
-from logging import debug
+from logging import debug, error
 
 
 # ______________________________________
@@ -161,13 +161,13 @@ class AnnaMuMuResult():
 
 			if not self._subresult:
 
-				print("No subresult from which \
+				error("No subresult from which \
 						I could get the {} one...".format(subresult_name))
 				return None
 
 			sub = self._subresult[subresult_name]
 			if not sub:
-				print("No subresult from which \
+				error("No subresult from which \
 						I could get the {} one...".format(subresult_name))
 				return None
 
@@ -268,13 +268,13 @@ class AnnaMuMuResult():
 
 			if not self._subresult:
 
-				print("No subresult from which \
+				error("No subresult from which \
 						I could get the {} one...".format(subresult_name))
 				return 0
 
 			sub = self._subresult[subresult_name]
 			if not sub:
-				print("No subresult from which \
+				error("No subresult from which \
 						I could get the {} one...".format(subresult_name))
 				return 0
 
@@ -390,14 +390,14 @@ class AnnaMuMuResult():
 		if len(subresult_name) > 0:
 
 			if not self._subresult:
-				print("No subresult from which \
+				error("No subresult from which \
 						I could get the {} one...".format(subresult_name))
 				return None
 
 			sub = self._subresult[subresult_name]
 
 			if not sub:
-				print("No subresult from which \
+				error("No subresult from which \
 						I could get the {} one...".format(subresult_name))
 				return None
 
@@ -485,14 +485,14 @@ class AnnaMuMuResult():
 		"""
 		if len(subresult_name) > 0:
 			if self._subresults is None:
-				print("Error : No subresults from which \
+				error("Error : No subresults from which \
 				I could get the {} one...".format(subresult_name))
 				return False
 		
 		try:
 			sub = self._subresults[subresult_name]
 		except KeyError:
-			print("Error : Could not get subresult named " + subresult_name)
+			error("Error : Could not get subresult named " + subresult_name)
 			return False
 
 		return sub.HasValue(name)
@@ -502,7 +502,7 @@ class AnnaMuMuResult():
 			try:
 				self._subresults[subresult_name]
 			except KeyError:
-				print(
+				error(
 					"Error : Could not get subresult named " 
 					+ subresult_name 
 					+ " from map"

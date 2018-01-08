@@ -16,6 +16,7 @@ from Ostap.PyRoUts import *
 # Python
 import os.path
 from logging import debug, error, info
+logging.basicConfig(format='%(filename)s:%(funcName)s:%(levelname)s:%(message)s', level=logging.DEBUG)
 
 # ______________________________________
 class AnnaMuMuFacade:
@@ -87,7 +88,7 @@ class AnnaMuMuFacade:
 		db = DBASE.open('AnnaMuMu')
 
 		if db != None:
-			debug('AdoptResult: result : {}'.format(result))
+			debug('result : {}'.format(result))
 
 			# Check if file exists
 			try:
@@ -106,11 +107,11 @@ class AnnaMuMuFacade:
 				print("+++result {} adopted".format(result.GetName()))
 			
 			else:
-				error("AdoptResult: Could not adopt result {}".format(result.GetName()))
+				error("Could not adopt result {}".format(result.GetName()))
 				return
 
 		else: 
-			error("AdoptResult: Error creating result file")
+			error("Error creating result file")
 			return
 
 	# ______________________________________

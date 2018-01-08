@@ -30,16 +30,16 @@ class AnnaMuMuSpectra():
 		""" adopt (i.e. we are becoming the owner) a result for a given bin"""
 
 		if result is None:
-			error("AdoptResult: Cannot adopt a null result list")
+			error("Cannot adopt a null result list")
 			return 0
 
-		debug("AdoptResult: result : {}".format(result))
+		debug("result : {}".format(result))
 		sizeBeforeAdd = len(self._results)
 		self._results[str(bin)] = result  # Add the result for a given bin type
 		sizeAfterAdd = len(self._results)
 			
 		if sizeBeforeAdd >= sizeAfterAdd:
-			error("AdoptResult: Error adopting result {} to spectra {}".format(
+			error("Error adopting result {} to spectra {}".format(
 				result.GetName(), 
 				self.GetName()))
 			return 0
