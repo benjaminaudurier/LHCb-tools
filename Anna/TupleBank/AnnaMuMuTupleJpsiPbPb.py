@@ -2,7 +2,7 @@
 ## @class AnnaMuMuTupleBase
 #  Mother class of all the sparse
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
-#  @date   2017-12-21 
+#  @date   2017-12-21
 
 from logging import error
 from .AnnaMuMuTupleBase import AnnaMuMuTupleBase
@@ -13,16 +13,17 @@ from logging import info
 # ______________________________________
 class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 
+
 	# ______________________________________
 	def __init__(self, mother_leaf='', dimuon_leafs=['', '']):
 		"""THnSparse for Jpsi PbPb Analysis
-				
+
 		Keyword Arguments:
 			mother_leaf {str} -- (default: {''})
 			dimuon_leafs {list} -- (default: {[''})
 			name {str} -- (default: {''})
 		"""
-		
+
 		AnnaMuMuTupleBase.__init__(self, mother_leaf, dimuon_leafs, 'AnnaMuMuTupleJpsiPbPb')
 		self.filter_mask = {
 			"muon_mask": 'PT>750 ** TRACK_GhostProb<0.5 ** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3 ** IP_OWNPV<3 ** PIDmu>0 ** PIDK<6 ** CosTheta<0.9999',
@@ -34,7 +35,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 	def CheckChainBranch(self, chain):
 		"""Make sure the chain has the requiered leafs
 		Arguments:
-			chain {TChain} -- 
+			chain {TChain} --
 		"""
 
 		# vertex info
@@ -99,7 +100,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 
 	# ______________________________________
 	def CreateTuple(self):
-		
+
 		return TNtuple(self.name, self.name, "MM:PT:Y:OWNPV_Z:rho:DV:dZ:tZ:plusPIDmu:minusPIDmu:plusPIDK:minusPIDK:eHcal:eEcal:nVeloClusters")
 
 	# ______________________________________
@@ -112,8 +113,8 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		print('-- mother_mask : {}'.format(self.filter_mask['mother_mask'].split('**')))
 		print('-- other : {}'.format(self.filter_mask['other'].split('**')))
 		print(
-			'''\n You may also want to check 
-			AnnaMuMuTupleJpsiPbPb::IsInLuminosityRegion() 
+			'''\n You may also want to check
+			AnnaMuMuTupleJpsiPbPb::IsInLuminosityRegion()
 			where other cuts are also defined \n''')
 
 		if general_mask is None:
@@ -121,7 +122,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			return None
 
 		ntuple = self.CreateTuple()
-		if self.CheckChainBranch(chain) is False: 
+		if self.CheckChainBranch(chain) is False:
 			error(' attributes are missing')
 			return None
 
@@ -130,7 +131,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		print(' --- Start running over events ...')
 		for entry in chain.withCuts(general_mask):
 			entry_number += 1
-			if entry_number%100 == 0: 
+			if entry_number%100 == 0:
 				print('event {}'.format(entry_number))
 
 			ok_lumi, v_OWNPV, v_ENDVERTEX = self.IsInLuminosityRegion(entry_number, entry)
@@ -160,7 +161,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 				getattr(entry, 'eHcal'),
 				getattr(entry, 'eEcal'),
 				getattr(entry, 'nVeloClusters'))
-		
+
 		print(' --- Done ! Ran over {} events !'.format(entry_number))
 		return ntuple
 
@@ -208,7 +209,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			error("No info ENDVERTEX_NDOF in entry {}".format(entry_number))
 			return False, None, None
 
-		if OWNPV_Z < -200. or OWNPV_Z > 200.: 
+		if OWNPV_Z < -200. or OWNPV_Z > 200.:
 			info("OWNPV out of range")
 			return False, None, None
 		if ENDVERTEX_Z < -200. or ENDVERTEX_Z > 200.:
@@ -226,7 +227,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		ENDVERTEX_R = v_ENDVERTEX.Perp()
 
 		if OWNPV_R < 0.35 or OWNPV_R > 0.95:
-			info("OWNPV_R out of range") 
+			info("OWNPV_R out of range")
 			return False, None, None
 		if ENDVERTEX_R < 0.35 or ENDVERTEX_R > 0.95:
 			info("ENDVERTEX_R out of range")
@@ -236,5 +237,5 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 
 
 # =============================================================================
-# The END 
+# The END
 # =============================================================================

@@ -1,7 +1,7 @@
 # =============================================================================
 #  @class AnnaMuMuResult
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
-#  @date   2017-11-30 
+#  @date   2017-11-30
 
 import math
 from logging import debug, error
@@ -25,22 +25,22 @@ class Index():
 # ______________________________________
 class AnnaMuMuResult():
 	"""Store results for the Anna framework
-	
+
 	Base class to hold a set of results of the same quantity,
 	computed using various methods, each with their errors.
 	A AnnaMuMuResult can hold other AnnaMuMuResult, refered as
 	subresults later.
-	
+
 	"""
 
 	# ______________________________________
 	def __init__(self, name, title, histo=None):
 		"""cstr
-				
+
 		Arguments:
-			name {str} -- 
-			title {str} -- 
-		
+			name {str} --
+			title {str} --
+
 		Keyword Arguments:
 			histo {TH1} -- (default: {None})
 		"""
@@ -49,14 +49,14 @@ class AnnaMuMuResult():
 		self.name = name
 		self.title = title
 		self._subresults = None  # dict()
-		self._subresults_to_be_incuded = None  # list()
-		
-		# How to merge quantity for subresults 
-		self._mergingMethod = MergingMethod()  
+		self._subresults_to_be_included = None  # list()
+
+		# How to merge quantity for subresults
+		self._mergingMethod = MergingMethod()
 		self._resultMergingMethod = self._mergingMethod.kMean
 		self._index = Index()
 		self._map = None
-		
+
 		# Will be define only if self is a sub-result
 		self.binning = None
 		self.histo = histo
@@ -66,10 +66,10 @@ class AnnaMuMuResult():
 	# ______________________________________
 	def AdoptSubResult(self, result_list):
 		"""Adopt all results in the result list
-				
+
 		Arguments:
 			result_list {list()} -- Must contains AnnaMuMuResults
-		
+
 		Returns:
 			int -- number of subresults stored
 		"""
@@ -83,22 +83,22 @@ class AnnaMuMuResult():
 			self.SubResultsToBeIncluded().append(r.GetName())
 		subresultsAfterAdd = len(self._subresults)
 
-		if subresultsBeforeAdd < subresultsAfterAdd: 
+		if subresultsBeforeAdd < subresultsAfterAdd:
 			return subresultsAfterAdd - subresultsBeforeAdd
-		else: 
+		else:
 			return 0
 
 	# ______________________________________
 	def DeleteEntry(self, entry):
-		"""Delete entry in self._subresults_to_be_incuded
-				
+		"""Delete entry in self._subresults_to_be_included
+
 		Arguments:
 			entry {str} --
 		"""
 
 		while True:
 			try:
-				self._subresults_to_be_incuded.remove(entry)
+				self._subresults_to_be_included.remove(entry)
 			except ValueError:
 				return
 
@@ -120,10 +120,10 @@ class AnnaMuMuResult():
 	# ______________________________________
 	def Exclude(self, sub_result_list):
 		""" Exclude some subresult names from the list of subresult
-		to be used when computing the mean of a value 
-				
+		to be used when computing the mean of a value
+
 		Arguments:
-			sub_result_list {list()} -- 
+			sub_result_list {list()} --
 		"""
 
 		slist = sub_result_list
@@ -133,25 +133,25 @@ class AnnaMuMuResult():
 		if slist == "*":
 			self.Exclude(to_be_excluded)
 			return
-		
+
 		if self.self._subresult is not None:
 			a = slist.split(",")
 
 			for s in a:
 				self.DeleteEntry(a)
-	
+
 	# ______________________________________
 	def GetErrorStat(self, name, subresult_name):
-		"""Get the stat. error of a value (either directly 
+		"""Get the stat. error of a value (either directly
 		or by computing the mean of the subresults).
 
 		Default method is mean, but it can be changed with a different settings
 		of self._resultMergingMethod
-				
+
 		Arguments:
 			name {str} -- Name of the variable
 			subresult_name {str} -- subresult name
-		
+
 		Returns:
 			number -- None in case of error
 		"""
@@ -204,7 +204,7 @@ class AnnaMuMuResult():
 							r.GetName(), fitStatus, covStatus)
 						)
 						continue
-					
+
 					# weight and error
 					w, err = r.Weight(), r.GetErrorStat(name)
 					debug(" --- Weight for subResults {} = {} \n".format(r.GetName(), w))
@@ -214,12 +214,12 @@ class AnnaMuMuResult():
 						debug(" --- subResults {} has a negative error stat \n".format(
 							r.GetName(), err)
 						)
-						
+
 					# stat and sum of weight
 					werr += w * err
 					sumw += w
 					n += 1
-			
+
 			# Case something went wrong
 			try:
 				assert n > 1
@@ -229,16 +229,16 @@ class AnnaMuMuResult():
 			if n == 1:
 				for r in self._subresults:
 					if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
-						return r.GetErrorStat(name)			
+						return r.GetErrorStat(name)
 
 			return werr / sumw
 
 		else:
 			n, sm, sme2 = 0, 0., 0.
 			for r in self._subresults:
-				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):			  
+				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
 					err = r.GetErrorStat(name) / r.GetValue(name)
-					
+
 					sme2 += err * err
 					sm += r.GetValue(name)
 					++n
@@ -254,11 +254,11 @@ class AnnaMuMuResult():
 	# ______________________________________
 	def GetRMS(self, name, subresult_name):
 		"""Compute the rms of the subresults.
-		
+
 		Arguments:
 			name {str -- Name of the variable
 			subresult_name {str -- subresults
-		
+
 		Returns:
 			number -- 0 in case of problem
 		"""
@@ -293,13 +293,13 @@ class AnnaMuMuResult():
 			if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
 
 				"""
-				The weight for each subresult is the same (=1.), since the data sample 
+				The weight for each subresult is the same (=1.), since the data sample
 				is always the same and just the fit function changes among subresults.
-				We can also use 1./err/err/wstat  where wstat = 1. / val as stat. 
+				We can also use 1./err/err/wstat  where wstat = 1. / val as stat.
 				wstat was not there before and
-				was introduced to remove the dependence 
-				of the error with the Nof extracted Jpsi 
-				(valid only for counts results with different data samples 
+				was introduced to remove the dependence
+				of the error with the Nof extracted Jpsi
+				(valid only for counts results with different data samples
 				and not for <pt>...)
 				"""
 
@@ -326,7 +326,7 @@ class AnnaMuMuResult():
 				diff = r.GetValue(name) - xmean
 				sm += wi * diff * diff
 				n += 1
-		
+
 		# Case something went wrong
 		try:
 			assert n > 1
@@ -336,7 +336,7 @@ class AnnaMuMuResult():
 		if n == 1:
 			for r in self._subresults:
 				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
-					return r.GetRMS(name)			
+					return r.GetRMS(name)
 
 		unbiased = math.sqrt((v1 / (v1 * v1 - v2)) * sm)
 		biased = math.sqrt(sm / v1)
@@ -360,11 +360,11 @@ class AnnaMuMuResult():
 		subresult_name_list = ''
 
 		for result in self._subresults:
-			if len(subresult_name_list) > 0: 
+			if len(subresult_name_list) > 0:
 				subresult_name_list += ","
 
 			subresult_name_list += result.GetName()
-		
+
 		return subresult_name_list
 
 	# ______________________________________
@@ -374,14 +374,14 @@ class AnnaMuMuResult():
 	# ______________________________________
 	def GetValue(self, name, subresult_name):
 		"""Get a value (either directly or by computing the mean of the subresults).
-				
+
 		Default method is mean, but it can be changed with a different settings
 		of self._resultMergingMethod
-				
+
 		Arguments:
 			name {str -- Name of the variable
 			subresult_name {str -- subresult name
-		
+
 		Returns:
 			number -- None in case of error
 		"""
@@ -416,15 +416,15 @@ class AnnaMuMuResult():
 			for r in self._subresults:
 				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
 
-					""" 
-					The weight for each subresult is the same (=1.), since the data sample 
+					"""
+					The weight for each subresult is the same (=1.), since the data sample
 					is always the same and just the fit function changes among subresults.
 					We can also weight subresults with :
 						e = r.GetErrorStat(name)/math.sqrt(r.GetValue(name))
 
-					The math.sqrt(r>GetValue(name)) was not there before and was introduced 
-					to remove the dependence of the error with the number of particule 
-					extracted (valid only for counts results with different data samples 
+					The math.sqrt(r>GetValue(name)) was not there before and was introduced
+					to remove the dependence of the error with the number of particule
+					extracted (valid only for counts results with different data samples
 					and not for <pt>...)
 					"""
 
@@ -442,7 +442,7 @@ class AnnaMuMuResult():
 							r.GetName(), fitStatus, covStatus)
 						)
 						continue
-					
+
 					# weight and error
 					w = r.Weight()
 					debug(" --- Weight for subResults {} = {} \n".format(r.GetName(), w))
@@ -451,7 +451,7 @@ class AnnaMuMuResult():
 						continue
 					mean += w * r.GetValue(name)
 					sm += w
-								
+
 			# Case something went wrong
 			try:
 				assert sm != 0.
@@ -463,9 +463,9 @@ class AnnaMuMuResult():
 		else:
 			sm = 0.
 			for r in self._subresults:
-				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):			  
+				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
 					sm += r.GetValue(name)
-			
+
 			# Case something went wrong
 			try:
 				assert sm != 0.
@@ -479,7 +479,7 @@ class AnnaMuMuResult():
 
 	# ______________________________________
 	def HasValue(self, name, subresult_name):
-		"""Whether this result (or subresult if subresult_name is provided) 
+		"""Whether this result (or subresult if subresult_name is provided)
 		has a property named "name"
 		When having subresults, return the number of subresults that have this value
 		"""
@@ -488,7 +488,7 @@ class AnnaMuMuResult():
 				error("Error : No subresults from which \
 				I could get the {} one...".format(subresult_name))
 				return False
-		
+
 		try:
 			sub = self._subresults[subresult_name]
 		except KeyError:
@@ -503,16 +503,16 @@ class AnnaMuMuResult():
 				self._subresults[subresult_name]
 			except KeyError:
 				error(
-					"Error : Could not get subresult named " 
-					+ subresult_name 
+					"Error : Could not get subresult named "
+					+ subresult_name
 					+ " from map"
 				)
 				return False
 			return True
 
 		n = 0
-		for r in self._subresults:			 
-			if r.HasValue(name) is True: 
+		for r in self._subresults:
+			if r.HasValue(name) is True:
 				n += 1
 
 		return n
@@ -531,35 +531,35 @@ class AnnaMuMuResult():
 
 		a = sub_result_list.split(',')
 		for s in a:
-			if self._subresults_to_be_incuded is None:
-				self._subresults_to_be_incuded = list()
+			if self._subresults_to_be_included is None:
+				self._subresults_to_be_included = list()
 
 			if self.IsIncluded(s) is False:
-				self._subresults_to_be_incuded.append(s)
+				self._subresults_to_be_included.append(s)
 
 	# ______________________________________
 	def IsIncluded(self, alias):
-		""" 
+		"""
 		whether that subresult alias should be included when computing means, etc...
 		"""
 
-		if self._subresults_to_be_incuded is None: 
+		if self._subresults_to_be_included is None:
 			return True
-		
+
 		try:
-			assert self._subresults_to_be_incuded.count(alias) == 1
+			assert self._subresults_to_be_included.count(alias) == 1
 		except AssertionError:
 			return False
-		
+
 		return True
 
 	# ______________________________________
 	def Print(self, opt):
 		"""
 		printout
-		"""	
+		"""
 		option = opt
-		for x in range(0, 9): 
+		for x in range(0, 9):
 			option = option.replace(str(x), '')
 		poption = option
 		poption.replace("ALL", '')
@@ -570,7 +570,7 @@ class AnnaMuMuResult():
 		print("{} {} {}".format(
 			self.GetName(),
 			self.GetTitle(),
-			" WEIGHT {}".format(self.weigth)) if self.weigth > 0.0 else "" 
+			" WEIGHT {}".format(self.weigth)) if self.weigth > 0.0 else ""
 		)
 
 		if self._subresults is not None and len(self._subresults) > 1:
@@ -588,11 +588,11 @@ class AnnaMuMuResult():
 						self.GetValue(key),
 						self.GetErrorStat(key),
 						self.GetRMS
-					) 
+					)
 
 		if self._subresults is not None and \
 			(option.count('ALL') > 1 or option.count('FULL') > 1):
-			
+
 			print(poption + '\t===== sub results ===== ')
 			option += "\t\t"
 
@@ -603,7 +603,7 @@ class AnnaMuMuResult():
 
 	# ______________________________________
 	def PrintValue(self, key, opt, value, errorStat, rms):
-		""" 
+		"""
 		print one value and its associated error
 		"""
 
@@ -689,10 +689,10 @@ class AnnaMuMuResult():
 
 	# ______________________________________
 	def Set(self, name, value, errorStat, rms=0.):
-		""" 
+		"""
 		Set a (value,error) pair with a given name
 		"""
-		if self._map is None: 
+		if self._map is None:
 			self._map = dict()
 		try:
 			p = self._map[name]
@@ -709,21 +709,21 @@ class AnnaMuMuResult():
 		"""
 		get a given subresult
 		"""
-		if self._subresults is None: 
+		if self._subresults is None:
 			return None
-		
+
 		for r in self._subresults:
-			if r.GetName() == subresult_name: 
+			if r.GetName() == subresult_name:
 				return r
 
 		return None
 
 	# ______________________________________
 	def SubResultsToBeIncluded(self):
-		if self._subresults_to_be_incuded is None:
-			self._subresults_to_be_incuded = list()
-		return self._subresults_to_be_incuded
+		if self._subresults_to_be_included is None:
+			self._subresults_to_be_included = list()
+		return self._subresults_to_be_included
 
 # =============================================================================
-# The END 
-# =============================================================================	 
+# The END
+# =============================================================================

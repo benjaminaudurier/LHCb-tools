@@ -1,7 +1,7 @@
 # =============================================================================
 #  @class AnnaMuMuFacade
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
-#  @date   2017-11-30 
+#  @date   2017-11-30
 
 # From the framework
 from .AnnaMuMuConfig import AnnaMuMuConfig
@@ -15,27 +15,28 @@ import Ostap.ZipShelve as DBASE
 from Ostap.PyRoUts import *
 # Python
 import os.path
+import logging
 from logging import debug, error, info
 logging.basicConfig(format='%(filename)s:%(funcName)s:%(levelname)s:%(message)s', level=logging.DEBUG)
 
 # ______________________________________
 class AnnaMuMuFacade:
 	"""
-	The framework is meant to work inside the LHCb framework 
+	The framework is meant to work inside the LHCb framework
 	as it relies on OSTAP for the fits and the saving data.
-	So, prior to import this module, the user must be sure to be 
+	So, prior to import this module, the user must be sure to be
 	in an Ostap session (lb-run Bender/latest ostap).
 
 	This class takes 3 arguments :
 		- tchain : A first TChain object containing the data.
-		
-		- tchain2 : A second TChain object, not medatory, but usefull 
+
+		- tchain2 : A second TChain object, not medatory, but usefull
 					in MC studies for instance (just in case in the futur).
 
-		- configfile : read by AnnaMuMuConfig to configure 
+		- configfile : read by AnnaMuMuConfig to configure
 						our object (See AnnaConfig for details)
 
-	As a facade, each functions call a dedicade class inside the framework who 
+	As a facade, each functions call a dedicade class inside the framework who
 	actually makes the job (exp: fit, print(diagrams ... ).
 	See the classes and functions documentations for more details.
 	"""
@@ -49,7 +50,7 @@ class AnnaMuMuFacade:
 		self._tchain = tchain
 		self._tchain2 = tchain2
 		self._configfile = AnnaMuMuConfig()
-		
+
 		if self._tchain != None and type(self._tchain) != type(TChain()):
 			error("{} is not a TChain".format(tchain))
 			return
@@ -58,7 +59,7 @@ class AnnaMuMuFacade:
 			error("{} is not a TChain".format(tchain2))
 			return
 
-		# Set _configfile 
+		# Set _configfile
 		info(" Try to read config file ...")
 		if self._configfile.ReadFromFile(configfile) is True:
 			info(" ---- config file set !")
@@ -74,17 +75,17 @@ class AnnaMuMuFacade:
 	# ______________________________________
 	def AdoptResult(self, result, result_path):
 		"""Add result to RootShelve file result.
-		
+
 		The method create / get a RootShelve file in the local directory
 		called AnnaResults.
-		
+
 		Arguments:
 			result {[type]} -- must inherit from TObject
 			result_path {[type]} -- path inside AnnaResults.root
 		"""
 
 		# Create / get results file in the local directory """
-		
+
 		db = DBASE.open('AnnaMuMu')
 
 		if db != None:
@@ -101,27 +102,26 @@ class AnnaMuMuFacade:
 				print("Replacing {}/{}".format(result_path, result.GetName()))
 				del o
 
-
-			db[str(result_path)] = result 
+			db[str(result_path)] = result
 			if db[str(result_path)] != None:
 				print("+++result {} adopted".format(result.GetName()))
-			
+
 			else:
 				error("Could not adopt result {}".format(result.GetName()))
 				return
 
-		else: 
+		else:
 			error("Error creating result file")
 			return
 
 	# ______________________________________
-	def CreateFilteredTuple(self, tuple_name='JpsiPbPb'):
+	def CreateFilteredTuple(self, tuple_filter_name='AnnaMuMuTupleJpsiPbPb'):
 		"""Fill and save a filtered tuple from self._chain after applying cuts
-		on leafs. 
+		on leafs.
 		"""
 
 		print(" ================================================================ ")
-		print("     CreateFilteredTuple with Tuple {} ".format(tuple_name))
+		print("     CreateFilteredTuple with Tuple {} ".format(tuple_filter_name))
 		print(" ================================================================ ")
 
 		for mother_leaf in self._configfile.GetMotherLeaf():
@@ -135,24 +135,24 @@ class AnnaMuMuFacade:
 
 					# get the module
 					try:
-						module = getattr(TupleBank, 'AnnaMuMuTuple{}'.format(tuple_name))
-					except AttributeError :
-						error('Cannot find AnnaMuMuTuple{} module'.format(tuple_name))
+						module = getattr(TupleBank, tuple_filter_name)
+					except AttributeError:
+						error('Cannot find AnnaMuMuTuple{} module'.format(tuple_filter_name))
 
 					# Instance the object
 					try:
-						mumu_tuple = getattr(module, 'AnnaMuMuTuple{}'.format(tuple_name))(mother_leaf, dimuon_leaf)
-					except AttributeError :
-						error('Cannot find AnnaMuMuTuple{} instance'.format(tuple_name))
+						mumu_tuple = getattr(module, tuple_filter_name)(mother_leaf, dimuon_leaf)
+					except AttributeError:
+						error('Cannot find AnnaMuMuTuple{} instance'.format(tuple_filter_name))
 
 					# Get the tuple
 					ntuple = mumu_tuple.GetTuple(self._tchain)
 
 					if ntuple != None:
-						self.AdoptResult(ntuple, 'Tuple/{}/{}'.format(mother_leaf, tuple_name))
+						self.AdoptResult(ntuple, 'Tuple/{}/{}'.format(mother_leaf, tuple_filter_name))
 					else:
 						error("CreateFilteredTuple: Cannot get Tuple")
-						continue 
+						continue
 
 	# ______________________________________
 	def DrawMinv(self, particle_name="jpsi"):
@@ -165,22 +165,22 @@ class AnnaMuMuFacade:
 	# ______________________________________
 	def DrawNofWhat(self, particle_name="jpsi"):
 		return
-				
+
 	# ______________________________________
 	def FitParticle(self, particle_name="JPsi", binning=[], option=""):
 		"""Main Fit method
-		
+
 		Run over all combination of Centrality/Cut/Leaf from the config.
 		The fit process is passed to AnnaMuMuFitter class that return an
 		AnnaMuMuSpectra to be stored in the result TFile.
-						
+
 		Keyword Arguments:
-			particle_name {str} -- To set the particle mass 
+			particle_name {str} -- To set the particle mass
 				in AnnaMuMuFitter (default: {"JPsi"})
 			binning {list} -- Binning conditions for the fit. (default: {[]})
 				Should be a list as [str(leaf_name), x.x, x.x, x.x ...]
 				example :
-					["JPSI_PT", 0., 4000., 8000.]) 
+					["JPSI_PT", 0., 4000., 8000.])
 			option {str} -- possible options (for futur dvlp) (default: {""})
 		"""
 
@@ -249,5 +249,5 @@ class AnnaMuMuFacade:
 		return
 
 # =============================================================================
-# The END 
+# The END
 # =============================================================================
