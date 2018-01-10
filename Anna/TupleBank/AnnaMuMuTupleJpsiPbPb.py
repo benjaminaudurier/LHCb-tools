@@ -60,12 +60,12 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		try:
 			br = chain.GetBranch(self.mother_leaf + '_PT')
 		except AttributeError:
-			error(" No info {}_MM leafs in chain".format(self.mother_leaf))
+			error(" No info {}_PT leafs in chain".format(self.mother_leaf))
 			return False
 		try:
 			br = chain.GetBranch(self.mother_leaf + '_Y')
 		except AttributeError:
-			error(" No info {}_MM leafs in chain".format(self.mother_leaf))
+			error(" No info {}_Y leafs in chain".format(self.mother_leaf))
 			return False
 
 		# dimuon info

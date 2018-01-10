@@ -1,24 +1,24 @@
 # =============================================================================
 ## @class AnnaMuMuConfig
-#  helper class to store steering options for other Anna classes 
+#  helper class to store steering options for other Anna classes
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
-#  @date   2017-11-30 
+#  @date   2017-11-30
 from logging import debug, warning, info
 
 class AnnaMuMuConfig:
 	"""Helper class to store steering options for other Anna classes
-	
-	This class reads an extern text file and store info in a dictionnary. 
-	Each line of the config file should be written as <key> : <value> 
+
+	This class reads an extern text file and store info in a dictionnary.
+	Each line of the config file should be written as <key> : <value>
 	"""
 
 	# ______________________________________
-	def __init__(self):	
+	def __init__(self):
 		""" cstr """
 		self._map = dict()
 		self._key = (
-			"Centrality", 
-			"CutCombination", 
+			"Centrality",
+			"CutCombination",
 			"FitType",
 			"MotherLeaf",
 			"MuplusLeaf",
@@ -27,7 +27,7 @@ class AnnaMuMuConfig:
 	# ______________________________________
 	def ReadFromFile(self, configfile=""):
 		"""Read the configuration file and set tuples with correct entries.
-		
+
 		All lines in the file should be written as <key> : <value>>
 		example:
 			#Centrality: ALL
@@ -35,10 +35,10 @@ class AnnaMuMuConfig:
 			#CutCombination: 2.5<JPSI_Y&&JPSI_Y<4
 
 		Automatically skip empty line and line starting with '#'
-		
+
 		Keyword Arguments:
 			configfile {str} -- file name (default: {""})
-		
+
 		Returns:
 			bool -- weither or not the function succeeded
 		"""
@@ -94,7 +94,7 @@ class AnnaMuMuConfig:
 	# ______________________________________
 	def GetDefaultEntry(self, key_name):
 		return "#"
-			
+
 	# ______________________________________
 	def PrintKey(self):
 		print(self._key)
@@ -106,13 +106,13 @@ class AnnaMuMuConfig:
 	# ______________________________________
 	def DecodeLine(self, line=""):
 		"""Decode a line
-		
+
 		Inner functions to get key : value pair from
 		configuration file
-		
+
 		Keyword Arguments:
 			line {str} -- the line to read (default: {""})
-		
+
 		Returns:
 			{str}, {str} -- key, value
 		"""
@@ -128,10 +128,10 @@ class AnnaMuMuConfig:
 			return "", ""
 
 		debug("key: {} / value: {}".format(split_line[0], split_line[1]))
-			
+
 		return split_line[0], split_line[1]
 
 
 # =============================================================================
-# The END 
+# The END
 # =============================================================================

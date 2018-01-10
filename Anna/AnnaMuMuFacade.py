@@ -16,7 +16,7 @@ from Ostap.PyRoUts import *
 # Python
 import os.path
 import logging
-from logging import debug, error, info
+from logging import debug, error, info, warning
 logging.basicConfig(format='%(filename)s:%(funcName)s:%(levelname)s:%(message)s', level=logging.DEBUG)
 
 # ______________________________________
@@ -28,9 +28,9 @@ class AnnaMuMuFacade:
 	in an Ostap session (lb-run Bender/latest ostap).
 
 	This class takes 3 arguments :
-		- tchain : A first TChain object containing the data.
+		- tchain : A first TChain | TNtuple object containing the data.
 
-		- tchain2 : A second TChain object, not medatory, but usefull
+		- tchain2 : A second TChain | TNtuple object, not medatory, but usefull
 					in MC studies for instance (just in case in the futur).
 
 		- configfile : read by AnnaMuMuConfig to configure
@@ -51,13 +51,13 @@ class AnnaMuMuFacade:
 		self._tchain2 = tchain2
 		self._configfile = AnnaMuMuConfig()
 
-		if self._tchain != None and type(self._tchain) != type(TChain()):
-			error("{} is not a TChain".format(tchain))
-			return
+		# if self._tchain != None and type(self._tchain) != type(TChain()):
+			# warning(" is not a TChain".format(tchain))
+			# return
 
-		if self._tchain2 != None and type(self._tchain2) != type(TChain()):
-			error("{} is not a TChain".format(tchain2))
-			return
+		# if self._tchain2 != None and type(self._tchain2) != type(TChain()):
+			# warning("{} is not a TChain".format(tchain2))
+			# return
 
 		# Set _configfile
 		info(" Try to read config file ...")
@@ -68,6 +68,7 @@ class AnnaMuMuFacade:
 			error("Cannot set config file")
 
 		print(" ========================================= \n\n")
+
 	# ______________________________________
 	def __str__(self):
 		return "I am your father"
@@ -210,6 +211,9 @@ class AnnaMuMuFacade:
 							self._configfile.GetFitType(),
 							option
 						)
+						if spectra is None:
+							error('Cannot get spectra')
+							continue
 						self.AdoptResult(spectra, spectrapath)
 
 					if self._tchain2 != None:
@@ -228,6 +232,9 @@ class AnnaMuMuFacade:
 							self._configfile.GetFitType(),
 							option
 						)
+						if spectra is None:
+							error('Cannot get spectra')
+							continue
 						self.AdoptResult(spectra, spectrapath)
 
 		return
