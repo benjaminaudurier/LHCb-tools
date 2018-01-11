@@ -210,14 +210,15 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			return False, None, None
 
 		if OWNPV_Z < -200. or OWNPV_Z > 200.:
-			info("OWNPV out of range")
+			info("OWNPV out of range (|{}| > 200)".format(OWNPV_Z))
 			return False, None, None
 		if ENDVERTEX_Z < -200. or ENDVERTEX_Z > 200.:
-			info("ENDVERTEX out of range")
+			info("ENDVERTEX out of range (|{}| > 200)".format(ENDVERTEX_Z))
 			return False, None, None
 
 		# goodness of the dimuon vertex
 		if TMath.Prob(ENDVERTEX_CHI2, ENDVERTEX_NDOF) < 0.5 / 100.0:
+			info("vertex chi2/ndf too high ({} > 0.5 / 100.0)".format(ENDVERTEX_Z))
 			return False, None, None
 
 		v_OWNPV = TVector3(OWNPV_X, OWNPV_Y, OWNPV_Z)
@@ -227,10 +228,10 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		ENDVERTEX_R = v_ENDVERTEX.Perp()
 
 		if OWNPV_R < 0.35 or OWNPV_R > 0.95:
-			info("OWNPV_R out of range")
+			info("OWNPV_R out of range ({})".format(OWNPV_R))
 			return False, None, None
 		if ENDVERTEX_R < 0.35 or ENDVERTEX_R > 0.95:
-			info("ENDVERTEX_R out of range")
+			info("ENDVERTEX_R out of range".format(ENDVERTEX_R))
 			return False, None, None
 
 		return True, v_OWNPV, v_ENDVERTEX
