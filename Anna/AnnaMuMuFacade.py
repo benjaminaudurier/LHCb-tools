@@ -10,11 +10,12 @@ from .AnnaMuMuFitter import AnnaMuMuFitter
 import TupleBank as TupleBank
 import TupleBank.AnnaMuMuTupleJpsiPbPb
 # ROOT and Ostap
-from ROOT import TChain, TFile
+import ROOT
+import Ostap
 import Ostap.ZipShelve as DBASE
 from Ostap.PyRoUts import *
 # Python
-import os.path
+import sys
 import logging
 from logging import debug, error, info, warning
 logging.basicConfig(format='%(filename)s:%(funcName)s:%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -28,41 +29,39 @@ class AnnaMuMuFacade:
 	in an Ostap session (lb-run Bender/latest ostap).
 
 	This class takes 3 arguments :
-		- tchain : A first TChain | TNtuple object containing the data.
+		- data : A first data object.
+				Type could be TNtuple, Ostap.ZipShelve, TFile ... depending
+				on the method called. See methods for more details.
 
-		- tchain2 : A second TChain | TNtuple object, not medatory, but usefull
-					in MC studies for instance (just in case in the futur).
+		- data2 : A second data object, not medatory, but usefull
+					in MC studies for instance (at the moment not implementeds).
 
 		- configfile : read by AnnaMuMuConfig to configure
 						our object (See AnnaConfig for details)
 
 	As a facade, each functions call a dedicade class inside the framework who
-	actually makes the job (exp: fit, print(diagrams ... ).
+	actually do the job (exp: fit, print(diagrams ... ).
 	See the classes and functions documentations for more details.
+
+	Finally, all produced results are stored in a Ostap.ZipShelve object
+	in the same directory where AnnaMuMuFacade is used by default. One can
+	change the path if need using the config file (see AnnaMuMuConfig)
 	"""
 
 	# ______________________________________
-	def __init__(self, tchain=None, tchain2=None, configfile=""):
+	def __init__(self, data=None, data2=None, configfile=""):
 		""" cstr """
 
 		print(" ========== Init AnnaMuMuFacade ========== ")
 
-		self._tchain = tchain
-		self._tchain2 = tchain2
+		self._data = data
+		self._data2 = data2
 		self._configfile = AnnaMuMuConfig()
-
-		# if self._tchain != None and type(self._tchain) != type(TChain()):
-			# warning(" is not a TChain".format(tchain))
-			# return
-
-		# if self._tchain2 != None and type(self._tchain2) != type(TChain()):
-			# warning("{} is not a TChain".format(tchain2))
-			# return
 
 		# Set _configfile
 		info(" Try to read config file ...")
 		if self._configfile.ReadFromFile(configfile) is True:
-			info(" ---- config file set !")
+			info(" config file set !")
 
 		else:
 			error("Cannot set config file")
@@ -74,50 +73,9 @@ class AnnaMuMuFacade:
 		return "I am your father"
 
 	# ______________________________________
-	def AdoptResult(self, result, result_path):
-		"""Add result to RootShelve file result.
-
-		The method create / get a RootShelve file in the local directory
-		called AnnaResults.
-
-		Arguments:
-			result {[type]} -- must inherit from TObject
-			result_path {[type]} -- path inside AnnaResults.root
-		"""
-
-		# Create / get results file in the local directory """
-
-		db = DBASE.open('AnnaMuMu')
-
-		if db != None:
-			debug('result : {}'.format(result))
-
-			# Check if file exists
-			try:
-				o = db[str(result_path)]
-			except KeyError:
-				print("No object in {}/{}".format(result_path, result.GetName()))
-				o = None
-
-			if o != None:
-				print("Replacing {}/{}".format(result_path, result.GetName()))
-				del o
-
-			db[str(result_path)] = result
-			if db[str(result_path)] != None:
-				print("+++result {} adopted".format(result.GetName()))
-
-			else:
-				error("Could not adopt result {}".format(result.GetName()))
-				return
-
-		else:
-			error("Error creating result file")
-			return
-
-	# ______________________________________
 	def CreateFilteredTuple(self, tuple_filter_name='AnnaMuMuTupleJpsiPbPb'):
-		"""Fill and save a filtered tuple from self._chain after applying cuts
+		"""
+		Fill and save a filtered tuple from self._data after applying cuts
 		on leafs.
 		"""
 
@@ -125,12 +83,24 @@ class AnnaMuMuFacade:
 		print("     CreateFilteredTuple with Tuple {} ".format(tuple_filter_name))
 		print(" ================================================================ ")
 
+		# Check data type
+		if self._data is not None:
+			if isinstance(self._data, ROOT.TChain) is False:
+				error('Need a ROOT.TChain instead of {} !'.format(type(self._data)))
+				return
+		else:
+			error('Need something to run on !')
+			return
+
 		for mother_leaf in self._configfile.GetMotherLeaf():
-			if mother_leaf == "#": continue
+			if mother_leaf == "#":
+				continue
 			for muplus_leaf in self._configfile.GetMuonPlusLeaf():
-				if muplus_leaf == "#": continue
+				if muplus_leaf == "#":
+					continue
 				for muminus_leaf in self._configfile.GetMuonMinusLeaf():
-					if muminus_leaf == "#": continue
+					if muminus_leaf == "#":
+						continue
 
 					dimuon_leaf = [muplus_leaf, muminus_leaf]
 
@@ -147,24 +117,77 @@ class AnnaMuMuFacade:
 						error('Cannot find AnnaMuMuTuple{} instance'.format(tuple_filter_name))
 
 					# Get the tuple
-					ntuple = mumu_tuple.GetTuple(self._tchain)
+					ntuple = mumu_tuple.GetTuple(self._data)
 
-					if ntuple != None:
-						self.AdoptResult(ntuple, 'Tuple/{}/{}'.format(mother_leaf, tuple_filter_name))
+					if ntuple is not None:
+						self.SaveResult(
+							ntuple,
+							'Tuple/{}/{}'.format(mother_leaf, tuple_filter_name))
 					else:
 						error("CreateFilteredTuple: Cannot get Tuple")
 						continue
 
 	# ______________________________________
-	def DrawMinv(self, particle_name="jpsi"):
+	def DrawMinv(self, particle_name="JPsi"):
 		return
 
 	# ______________________________________
-	def DrawFitResults(self, particle_name="jpsi"):
-		return
+	def DrawFitResults(self, particle_name="JPsi", spectra_name="", subresults=None):
+		"""Draw all fit results
+
+		Draw all results/subresults (i.e fit functions) spectras on a single canvas
+		for every combination of Centrality/Cut/Leaf cut from the config.
+
+		Arguments:
+			particle_name {str} -- (default: {"JPsi"})
+			spectra_name {str} -- The name of the spectra
+			subresults {list} -- a specific list of subresults if needed
+
+		"""
+
+		print(" ================================================================ ")
+		print(
+			"      	DrawFitResults for particle {} and spectra {}"
+			.format(particle_name, spectra_name))
+		print(" ================================================================ ")
+
+		debug(
+			"FitParticle: AnnaMuMuConfig map : \n {}"
+			.format(self._configfile._map))
+
+		file = self.GetResultFile()
+		if file is None:
+			return
+
+		for centrality in self._configfile.GetCentrality():
+			for cut in self._configfile.GetCutCombination():
+				for leaf in self._configfile.GetMotherLeaf():
+
+					print("---------------------")
+					print("Looking for spectras ...")
+
+					spectrapath = "{}/FitParticle/{}/{}/{}".format(
+						self._data.GetName(),
+						centrality,
+						cut,
+						leaf)
+
+					spectra = file.get(
+						'{}/{}'
+						.format(spectrapath, spectra_name))
+
+					if spectra is None:
+						warning(
+							'Cannot find spectra in {}/{}, continue ...'
+							.format(spectrapath, spectra_name))
+						continue
+
+					spectra.DrawResults(particle_name, subresults)
+
+		file.close()
 
 	# ______________________________________
-	def DrawNofWhat(self, particle_name="jpsi"):
+	def DrawNofWhat(self, particle_name="JPsi"):
 		return
 
 	# ______________________________________
@@ -189,22 +212,55 @@ class AnnaMuMuFacade:
 		print("      	FitParticle {} for binning {}".format(particle_name, binning))
 		print(" ================================================================ ")
 
-		debug("FitParticle: AnnaMuMuConfig map : \n {}".format(self._configfile._map))
+		debug(
+			"FitParticle: AnnaMuMuConfig map : \n {}"
+			.format(self._configfile._map))
+
+		# Check data type
+		if self._data is not None:
+			if isinstance(self._data, ROOT.TNtuple) is False:
+				error('Need a ROOT.TNtuple instead of {} !'.format(type(self._data)))
+				return
+		else:
+			error('Need something to run on !')
+			return
 
 		for centrality in self._configfile.GetCentrality():
 			for cut in self._configfile.GetCutCombination():
 				for leaf in self._configfile.GetMotherLeaf():
+					spectrapath = "{}/FitParticle/{}/{}/{}".format(
+						self._data.GetName(),
+						centrality,
+						cut,
+						leaf
+					)
+					fitter = AnnaMuMuFitter(particle_name, binning)
+					spectra = fitter.Fit(
+						self._data,
+						leaf,
+						centrality,
+						cut,
+						self._configfile.GetFitType(),
+						option
+					)
+					if spectra is None:
+						error('Cannot get spectra')
+						continue
+					self.SaveResult(spectra, spectrapath)
 
-					if self._tchain != None:
+					if self._data2 is not None:
+						if isinstance(self._data, ROOT.NTuple):
+							error('Need a ROOT.TNtuple for second data object!')
+							return
 						spectrapath = "{}/FitParticle/{}/{}/{}".format(
-							self._tchain.GetName(),
+							self._data2.GetName(),
 							centrality,
 							cut,
 							leaf
 						)
 						fitter = AnnaMuMuFitter(particle_name, binning)
 						spectra = fitter.Fit(
-							self._tchain,
+							self._data2,
 							leaf,
 							centrality,
 							cut,
@@ -214,46 +270,93 @@ class AnnaMuMuFacade:
 						if spectra is None:
 							error('Cannot get spectra')
 							continue
-						self.AdoptResult(spectra, spectrapath)
-
-					if self._tchain2 != None:
-						spectrapath = "{}/FitParticle/{}/{}/{}".format(
-							self._tchain2.GetName(),
-							centrality,
-							cut,
-							leaf
-						)
-						fitter = AnnaMuMuFitter(particle_name, binning)
-						spectra = fitter.Fit(
-							self._tchain2,
-							leaf,
-							centrality,
-							cut,
-							self._configfile.GetFitType(),
-							option
-						)
-						if spectra is None:
-							error('Cannot get spectra')
-							continue
-						self.AdoptResult(spectra, spectrapath)
-
-		return
+						self.SaveResult(spectra, spectrapath)
 
 	# ______________________________________
 	def GetResultFile(self):
-		""" Create / get results file in the local directory """
-		if os.path.isfile('./AnnaResults.root'):
-			f = TFile.Open('AnnaResults.root', 'update')
-			return f
+		"""
+		Return the result file, creates one if necessary
+		"""
 
-		else:
-			print("Creating Result File ...")
-			f = TFile.Open('AnnaResults.root', 'recreate')
-			return f
+		file_path = self._configfile.GetResultFilePath()
+
+		# Check if several entrie
+		if file_path is not None:
+			if len(file_path) > 1:
+				warning(
+					'Many path for the result file are setted ({}), I will take the first one'
+					.format(file_path))
+				file_path = file_path[0]
+
+			# If the storing file is elsewhere
+			if file_path != "#":
+				sys.path.insert(0, file_path)
+				base = DBASE.open('AnnaMuMu')
+
+				if base is not None:
+					return base
+				else:
+					error(
+						'Cannot find AnnaMuMu file in {}'
+						.format(file_path))
+					return None
+
+			else:
+				base = DBASE.open('AnnaMuMu')
+
+				if base is not None:
+					return base
+				else:
+					error(
+						'Cannot find AnnaMuMu file in {}'
+						.format(file_path))
+					return None
 
 	# ______________________________________
-	def SaveResults(self, AnnaMuMuResults):
-		return
+	def SaveResult(self, result, result_path):
+		"""Add result to RootShelve file result.
+
+		The method create / get a RootShelve file in the local directory
+		called AnnaResults.
+
+		Arguments:
+			result {[type]} -- must inherit from TObject
+			result_path {[type]} -- path inside AnnaResults.root
+		"""
+
+		# Create / get results file in the local directory """
+
+		db = self.GetResultFile()
+
+		if db is not None:
+			debug('result : {}'.format(result))
+
+			# Check if file exists
+			try:
+				o = db[str(result_path + '/' + result.GetName())]
+			except KeyError:
+				print("No object in {}/{}".format(result_path, result.GetName()))
+				o = None
+
+			if o is not None:
+				print("Replacing {}/{}".format(result_path, result.GetName()))
+				del o
+
+			db[str(result_path + '/' + result.GetName())] = result
+			if db[str(result_path + '/' + result.GetName())] is not None:
+				print("+++result {}/{} adopted".format(result_path, result.GetName()))
+
+			else:
+				error("Could not adopt result {}".format(result.GetName()))
+				db.close()
+				return
+
+		else:
+			error("Error creating result file")
+			db.close()
+			return
+
+		db.close()
 
 # =============================================================================
 # The END
