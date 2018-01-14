@@ -16,9 +16,9 @@ class AnnaMuMuTupleBase:
 
 		self.filter_mask =
 		{
-			'muon_mask': 'cut1|cut2|...|cutn',
-			'mother_mask': 'cut1|cut2|...|cutn',
-			'other': 'cut1|cut2|...|cutn'
+			'muon_mask': 'cut1**cut2**...**cutn',
+			'mother_mask': 'cut1**cut2**...**cutn',
+			'other': 'cut1**cut2**...**cutn'
 		}
 
 		For example, see AnnaMuMuSparseJpsiPbPb
@@ -61,7 +61,7 @@ class AnnaMuMuTupleBase:
 			for cut in self.filter_mask['other'].split('**'):
 					general_mask += '{}&&'.format(cut)
 
-		return general_mask[:-2]
+		return str(general_mask[:-2]).replace(" ", "")
 
 		# ______________________________________
 		def GetTuple(self, chain):
