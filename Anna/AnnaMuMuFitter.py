@@ -10,7 +10,8 @@ import ROOT
 from Ostap.PyRoUts import *
 import Ostap.FitModels as Models
 # Python modules
-from logging import debug, error, warning
+from logging import debug, error, warning, info
+import inspect
 
 
 class AnnaMuMuFitter:
@@ -53,19 +54,24 @@ class AnnaMuMuFitter:
 		# Several dictionnaries used for fit
 		self._fit_key = {
 			"signal": "",
-			"bckgr": "",
+			"bkgr": "",
 			"weight": None}
 
 		# Mass map
 		self._mass_map = {
 			"JPsi": ROOT.RooRealVar(
-				'JPsi_mass', 'J/psi(1S) mass', 3025., 3150.),
+				'JPsi_mass', 'J/psi(1S) mass', 2900., 3200.),
 			"PsiP": ROOT.RooRealVar(
 				'PsiP_mass', 'Psi(2S) mass', 3600., 3800.),
 			"Upsilon": ROOT.RooRealVar(
 				'Upsilon_mass', 'Upsilon (1S) mass', 8500., 10500.),
 			"UpsilonPrime": ROOT.RooRealVar(
 				'UpsilonPrime_mass', 'Upsilon (2S) mass', 9000., 11000.)}
+
+		# width map
+		self._width_map = {
+			"JPsi": ROOT.RooRealVar(
+				'JPsi_sigma', 'J/psi(1S) sigma', 5., 70.)}
 
 		# Set particule name
 		try:
@@ -213,6 +219,105 @@ class AnnaMuMuFitter:
 		return cut_update
 
 	# ______________________________________
+	def CreateBackgroundPDF(self):
+		"""
+		Configure and return the background PDF
+		"""
+
+		try:
+			getattr(Models, self._fit_key['bkgr'])
+		except AttributeError:
+			error('''Cannot find {} in Ostap.FitModels
+				for background function'''.format(self._fit_key['bkgr']))
+			return None
+
+		background = getattr(Models, self._fit_key['bkgr'])(
+			'bkgr',
+			mass=self._mass_map[self._particle_name])
+
+		# Due to Ostap architectur, data members of PDF can't be set
+		# after initiating the function. Therefor, one must find bellow
+		# a mess to try to correctly create the background PDF object
+
+		# ---- Configure Bkg_pdf ----
+		if self._fit_key['bkgr'] == 'Bkg_pdf':
+
+			# Default value
+			param = {'power': 1}
+
+			self.UpdateParameters(param)
+
+			background = getattr(Models, self._fit_key['bkgr'])(
+				'bkgr',
+				mass=self._mass_map[self._particle_name],
+                power=int(param['power']))
+		else:
+			warning(
+				'{} has not default value setted, we encourage you to implement the code'
+				.format(self._fit_key['bkgr']))
+
+		return background
+
+	# ______________________________________
+	def CreateSignalPDF(self):
+		"""
+		Configure and return the signal PDF
+
+		The method checks all the attributes from FitType
+		string in the config file and set PDF object accordingly>
+		See the code for available attributes to set
+		"""
+
+		# try to get the fit functions from Ostap
+		try:
+			getattr(Models, self._fit_key['signal'])
+		except AttributeError:
+			error('''Cannot find {} in Ostap.FitModels
+				for signal function'''.format(self._fit_key['signal']))
+			return None
+
+		# Default PDF object
+		sig = getattr(Models, self._fit_key['signal'])(
+			'signal',
+			mass=self._mass_map[self._particle_name],
+			mn=self._mass_map[self._particle_name].getMin(),
+			mx=self._mass_map[self._particle_name].getMax(),
+			sigma=self._width_map[self._particle_name])
+
+		# Due to Ostap architectur, data members of PDF can't be set
+		# after initiating the function. Therefor, one must find bellow
+		# a mess to try to correctly create the background PDF object
+
+		# ---- Configure CB2 ----
+		if self._fit_key['signal'] == 'CB2_pdf':
+
+			# Default value
+			param = {
+				'alL': ROOT.RooRealVar('aL', 'aL', 0.01, 0.5),
+				'alR': ROOT.RooRealVar('aR', 'aR', 0.01, 0.5),
+				'nL': ROOT.RooRealVar('nL', 'nL', 0.01, 0.5),
+				'nR': ROOT.RooRealVar('nR', 'nR', 0.01, 0.5)}
+
+			self.UpdateParameters(param)
+
+			sig = getattr(Models, self._fit_key['signal'])(
+				'signal',
+				mass=self._mass_map[self._particle_name],
+				mn=self._mass_map[self._particle_name].getMin(),
+				mx=self._mass_map[self._particle_name].getMax(),
+				sigma=self._width_map[self._particle_name],
+				alphaL=param['alL'],
+				alphaR=param['alR'],
+				nL=param['nL'],
+				nR=param['nR'])
+		else:
+			warning(
+				'{} has not default value setted, we encourage you to implement the code'
+				.format(self._fit_key['signal']))
+
+		return sig
+
+	# ______________________________________
 	def DecodeFitType(self, fit_type):
 		"""Decode the string containing all
 			the information for the fit to be performed.
@@ -220,13 +325,13 @@ class AnnaMuMuFitter:
 		The fit_type must be combination of key=value pairs separated by "|".
 		Default keys are available in self._key_value
 
-		Appart from the [signal] and [bckgr] keys, others have default values.
+		Appart from the [signal] and [bkgr] keys, others have default values.
 		If the key is different from standard key value it is assumed
 		to be the value for a parameter of the fit function.
 
 		Arguments:
 			fit_type {str} -- example :
-				particle=JPsi|leaf=jpsi_M|range=2;5|signal=CB2_pdf|bckgr=Bkg_pdf
+				particle=JPsi|leaf=jpsi_M|range=2;5|signal=CB2_pdf|bkgr=Bkg_pdf
 
 		Returns:
 			bool -- If the fit is correctly decoded
@@ -235,13 +340,13 @@ class AnnaMuMuFitter:
 		# Always reset the data member at each fit_type
 		self._fit_key["weight"] = 1
 
-		if fit_type.count("signal") != 1 or fit_type.count("bckgr") != 1:
+		if fit_type.count("signal") != 1 or fit_type.count("bkgr") != 1:
 			error(
 				"""Cannot decode type.
-				Expecting 1 entries with 'signal' and 'bckgr, found {} and {}"""
+				Expecting 1 entries with 'signal' and 'bkgr, found {} and {}"""
 				.format(
 					fit_type.count("signal"),
-					fit_type.count("bckgr")))
+					fit_type.count("bkgr")))
 			return False
 
 		# Check that keys appear only once in the string
@@ -258,7 +363,7 @@ class AnnaMuMuFitter:
 			key, value = self.GetKeyValue(pair, '=')
 
 			try:
-				assert key != None or value != None
+				assert key is not None or value is not None
 			except AssertionError:
 				print('Error : Invalid key=value pair ' + pair)
 			debug("key = %s, value = %s".format(key, value))
@@ -335,7 +440,7 @@ class AnnaMuMuFitter:
 			added_result += spectra.AdoptResult(annaresult, self.GetBinsAsString()[i])
 
 		print(
-			"""number of results added for {} : {}"""
+			"number of results added for {} : {}"
 			.format(spectra.GetName(), added_result))
 
 		return spectra
@@ -355,7 +460,7 @@ class AnnaMuMuFitter:
 		"""
 
 		try:
-			assert histo != None
+			assert histo is not None
 		except AssertionError:
 			error("Cannot get histo")
 			return None
@@ -367,38 +472,77 @@ class AnnaMuMuFitter:
 			# Get the fit configuration
 			self.DecodeFitType(fit_method)
 
-			# try to get the fit functions from Ostap
-			try:
-				getattr(Models, self._fit_key['signal'])
-			except AttributeError:
-				error('''Cannot find {} in Ostap.FitModels
-					for signal function'''.format(self._fit_key['signal']))
+			# get PDF and create fit model
+			signal = self.CreateSignalPDF()
+			if signal is None:
 				continue
-			try:
-				background = getattr(Models, self._fit_key['bckgr'])
-			except AttributeError:
-				error('''Cannot find {} in Ostap.FitModels
-					for background function'''.format(self._fit_key['bckgr']))
+			background = self.CreateBackgroundPDF()
+			if background is None:
 				continue
 
-			# Configure functions
-			signal = getattr(Models, self._fit_key['signal'])(
-				'sig',
-				self._mass_map[self._particle_name].getMin(),
-				self._mass_map[self._particle_name].getMax(),
-				mass=self._mass_map[self._particle_name])
+			# start by fitting the background
+			# mean = self._mass_map[self._particle_name].getMin() + (
+			# 	self._mass_map[self._particle_name].getMax() -
+			# 	self._mass_map[self._particle_name].getMin())/2
+			# self._mass_map[self._particle_name].setRange(
+			# 	"Range1",
+			# 	self._mass_map[self._particle_name].getMin(),
+			# 	mean - self._width_map[self._particle_name].getMax())
+			# self._mass_map[self._particle_name].setRange(
+			# 	"Range2",
+			# 	mean + self._width_map[self._particle_name].getMax(),
+			# 	self._mass_map[self._particle_name].getMax())
 
-			background = getattr(Models, self._fit_key['bckgr'])(
-				'bckgr',
-				self._mass_map[self._particle_name])
+			# bck_range = ROOT.RooRealVar(
+			# 	"bck_range",
+			# 	"bck_range",
+			# 	self._mass_map[self._particle_name].getMin(),
+			# 	mean - self._width_map[self._particle_name].getMax())
 
+			# background.fitTo(
+			# 	histo,
+			# 	sumw2=True,
+			# 	silent=True,
+			# 	draw=False,
+			# 	refit=False,
+			# 	chi2=False)
+
+			# return None
 			model = Models.Fit1D(signal=signal, background=background)
-			self.SetAdditionalAttributeToModelFunction(model)
 
-			print(""" \n------- > with {} + {} (weight = {} ) \n""".format(
-				self._fit_key['signal'], self._fit_key['bckgr'], self._fit_key['weight']))
-			result, frame = model.fitTo(histo, silent=True, draw=True, refit=True)
+			print(
+				" \n------- > with {} + {} (weight = {} ) \n"
+				.format(
+					self._fit_key['signal'],
+					self._fit_key['bkgr'],
+					self._fit_key['weight']))
+			result, frame = model.fitTo(
+				histo,
+				silent=False,
+				draw=True,
+				refit=True,
+				sumw2=True,
+				chi2=False,
+				ncpu=8)
 			debug("{}".format(result))
+
+			# # Fit again if status is bad
+			# if result.status() != 1:
+			# 	attempt = 0
+			# 	while attempt < 3:
+			# 		print(
+			# 			'\n >>>>>> attempt to fit again ({} time) <<<<<< \n'
+			# 			.format(attempt + 1))
+			# 		result, frame = model.fitTo(
+			# 			histo,
+			# 			silent=False,
+			# 			draw=True,
+			# 			refit=True,
+			# 			chi2=False,
+			# 			ncpu=8)
+			# 		if result.status() == 1:
+			# 			break
+			# 		attempt += 1
 
 			# Create the AnnaMuMuResult
 			sr_name = "{}_{}".format(fit_method, histo.GetName())
@@ -406,7 +550,7 @@ class AnnaMuMuFitter:
 			sr.weigth = self._fit_key['weight']
 			sr.frame = frame
 			for key in result.parameters().keys():
-				sr.Set(key, result(key)[0], result(key)[1])
+				sr.Set(key, result(key)[0].value(), result(key)[0].error())
 			sr.Set("FitResult", result.status(), 0., 0.)
 			sr.Set("CovMatrixStatus", result.covQual(), 0., 0.)
 
@@ -482,7 +626,7 @@ class AnnaMuMuFitter:
 
 		# Check if leaf exist
 		try:
-			assert tuple.GetLeaf(leaf) != None
+			assert tuple.GetLeaf(leaf) is not None
 		except AssertionError:
 			error("cannot find leaf {}".format(leaf))
 			return None
@@ -500,7 +644,7 @@ class AnnaMuMuFitter:
 			tuple.Draw(command, histo_cut, "goff")
 
 			try:
-				assert ROOT.gDirectory.Get("histo") != None
+				assert ROOT.gDirectory.Get("histo") is not None
 			except AssertionError:
 				error("cannot get histo from leaf {} ... continue".format(leaf))
 				continue
@@ -526,7 +670,7 @@ class AnnaMuMuFitter:
 		return split_pair[0], split_pair[1]
 
 	# ______________________________________
-	def SetAdditionalAttributeToModelFunction(self, model):
+	def SetAdditionalAttributeToModel(self, model):
 		"""Run over self._fit_key and try to configure
 		fit model if possible
 
@@ -534,35 +678,10 @@ class AnnaMuMuFitter:
 			model {Ostap.FitModels} --
 		"""
 
-		# First check we have arguments
-		attributes_set = list()
-
-		# Check if attribute belong to the signal part and set it if true
-		for i, attribute in enumerate(self._fit_key.keys()):
-			try:
-				getattr(model.signal, attribute)
-			except AttributeError:
-				debug(
-					'''No {} in the signal part of the model'''
-					.format(attribute))
-				continue
-			setattr(model.signal, attribute, self._fit_key[attribute])
-			attributes_set.append('signal.' + attribute)
-
-		# Check if attribute belong to the background part and set it if true
-		for attribute in self._fit_key.keys():
-			try:
-				getattr(model.background, attribute)
-			except AttributeError:
-				debug(
-					'''No {} in the background part of the model'''
-					.format(attribute))
-				continue
-			setattr(model.background, attribute, self._fit_key[attribute])
-			attributes_set.append('background.' + attribute)
-
 		# Check if attribute belong to the model itself and set it if true
-		for attribute in self._fit_key.keys():
+		for i, attribute in enumerate(self._fit_key.keys()):
+			if attribute in ['signal', 'bkgr', 'weight']:
+				continue
 			try:
 				getattr(model, attribute)
 			except AttributeError:
@@ -570,10 +689,52 @@ class AnnaMuMuFitter:
 					'''No {} in the background part of the model'''
 					.format(attribute))
 				continue
-			setattr(model, attribute, self._fit_key[attribute])
-			attributes_set.append('model.' + attribute)
+			info(
+				'Set attribute {} = {} to model'
+				.format(attribute, self._fit_key[attribute]))
 
-		debug("Additionnal Attributes sets : {}".format(attributes_set))
+			# Set attribute according to if it is a range or not
+			if ';' in self._fit_key[attribute]:
+				varmin = float(min(self._fit_key[attribute].split(';')))
+				varmax = float(max(self._fit_key[attribute].split(';')))
+				var = ROOT.RooRealVar(
+					self._particle_name + '_' + attribute,
+					self._particle_name + '_' + attribute,
+					varmin,
+					varmax)
+				setattr(model, attribute, var)
+			else:
+				setattr(model, attribute, self._fit_key[attribute])
+
+	# ______________________________________
+	def UpdateParameters(self, param):
+		"""
+		Change the parameters value of the fit
+		if there are entries related to sig PDF in the fit keys
+		"""
+
+		for i, attribute in enumerate(self._fit_key.keys()):
+			if attribute in param.keys():
+				# Set attribute according to if it is a range or not
+				if ';' in self._fit_key[attribute]:
+					varmin = float(min(self._fit_key[attribute].split(';')))
+					varmax = float(max(self._fit_key[attribute].split(';')))
+					var = ROOT.RooRealVar(
+						attribute,
+						attribute,
+						varmin,
+						varmax)
+					param[attribute] = var
+					print param[attribute]
+					print type(param[attribute])
+				else:
+					param[attribute] = float(self._fit_key[attribute])
+					print param[attribute]
+					print type(param[attribute])
+
+				info(
+					'Change default value of {} (= {}) for signal PDF'
+					.format(attribute, self._fit_key[attribute]))
 
 
 # =============================================================================
