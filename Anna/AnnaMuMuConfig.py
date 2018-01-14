@@ -3,7 +3,8 @@
 #  helper class to store steering options for other Anna classes
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30
-from logging import debug, warning, info
+from logging import debug, warning
+import ROOT
 
 class AnnaMuMuConfig:
 	"""Helper class to store steering options for other Anna classes
@@ -22,7 +23,8 @@ class AnnaMuMuConfig:
 			"FitType",
 			"MotherLeaf",
 			"MuplusLeaf",
-			"MuminusLeaf")
+			"MuminusLeaf",
+			"ResultFilePath")
 
 	# ______________________________________
 	def ReadFromFile(self, configfile=""):
@@ -51,7 +53,7 @@ class AnnaMuMuConfig:
 
 				# Find and store all the entries for a given key
 				for line in lines:
-					info("Reads line {}".format(line))
+					debug("Reads line {}".format(line))
 					if line == '' or line.startswith('#') is True:
 						continue
 					key, value = self.DecodeLine(line)
@@ -90,6 +92,10 @@ class AnnaMuMuConfig:
 	# ______________________________________
 	def GetMuonMinusLeaf(self):
 		return self._map["MuminusLeaf"]
+
+	# ______________________________________
+	def GetResultFilePath(self):
+		return self._map["ResultFilePath"]
 
 	# ______________________________________
 	def GetDefaultEntry(self, key_name):
@@ -131,6 +137,66 @@ class AnnaMuMuConfig:
 
 		return split_line[0], split_line[1]
 
+# ______________________________________
+def SetCanvasStyle(canvas):
+	"""
+	Default configuration for TCanvas
+	"""
+	ROOT.gStyle.SetOptStat(0)
+	ROOT.gStyle.SetOptTitle(0)
+
+	font = 42
+
+	ROOT.gROOT.SetStyle("Plain")
+	ROOT.gStyle.SetFrameBorderMode(0)
+	ROOT.gStyle.SetFrameFillColor(0)
+	ROOT.gStyle.SetCanvasBorderMode(0)
+	ROOT.gStyle.SetPadBorderMode(0)
+	ROOT.gStyle.SetPadColor(10)
+	ROOT.gStyle.SetCanvasColor(10)
+	ROOT.gStyle.SetTitleFillColor(10)
+	ROOT.gStyle.SetTitleBorderSize(1)
+	ROOT.gStyle.SetStatColor(10)
+	ROOT.gStyle.SetStatBorderSize(1)
+	ROOT.gStyle.SetLegendBorderSize(1)
+	ROOT.gStyle.SetDrawBorder(0)
+	ROOT.gStyle.SetTextFont(font)
+	ROOT.gStyle.SetStatFont(font)
+	ROOT.gStyle.SetStatFontSize(0.05)
+	ROOT.gStyle.SetStatX(0.97)
+	ROOT.gStyle.SetStatY(0.98)
+	ROOT.gStyle.SetStatH(0.03)
+	ROOT.gStyle.SetStatW(0.3)
+	ROOT.gStyle.SetTickLength(0.02, "y")
+	ROOT.gStyle.SetEndErrorSize(3)
+	ROOT.gStyle.SetLabelSize(0.05, "xyz")
+	ROOT.gStyle.SetLabelFont(font, "xyz")
+	ROOT.gStyle.SetLabelOffset(0.01, "xyz")
+	ROOT.gStyle.SetTitleFont(font, "xyz")
+	ROOT.gStyle.SetTitleOffset(1.1, "xy")
+	ROOT.gStyle.SetTitleSize(0.05, "xyz")
+	ROOT.gStyle.SetMarkerSize(1.3)
+	# ROOT.gStyle.SetPalette(1, 0)
+
+	ROOT.gROOT.ForceStyle()
+	ROOT.gStyle.SetOptStat(0)
+	ROOT.gStyle.SetOptTitle(0)
+	ROOT.gStyle.SetLineWidth(2)
+	ROOT.gStyle.SetLegendFont(42)
+	ROOT.gStyle.SetLegendBorderSize(0)
+	ROOT.gStyle.SetLegendFillColor(10)
+	ROOT.gStyle.SetPadTickY(1)
+	ROOT.gStyle.SetPadTickX(1)
+	ROOT.gStyle.SetEndErrorSize(0)
+
+	canvas.SetFillColor(0)
+	canvas.SetBorderMode(0)
+	canvas.SetBorderSize(0)
+	canvas.SetLeftMargin(0.18)
+	canvas.SetRightMargin(0.1)
+	canvas.SetBottomMargin(0.1518219)
+	canvas.SetTopMargin(0.)
+	canvas.SetFrameBorderMode(0)
 
 # =============================================================================
 # The END
