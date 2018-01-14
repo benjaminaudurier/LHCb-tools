@@ -48,8 +48,8 @@ class AnnaMuMuResult():
 		# General for all AnnaMuMuResult
 		self.name = name
 		self.title = title
-		self._subresults = None  # dict()
-		self._subresults_to_be_included = None  # list()
+		self.subresults = None  # dict()
+		self.subresults_to_be_included = None  # list()
 
 		# How to merge quantity for subresults
 		self._mergingMethod = MergingMethod()
@@ -74,14 +74,14 @@ class AnnaMuMuResult():
 			int -- number of subresults stored
 		"""
 
-		if self._subresults is None:
-			self._subresults = dict()
+		if self.subresults is None:
+			self.subresults = dict()
 
-		subresultsBeforeAdd = len(self._subresults)
+		subresultsBeforeAdd = len(self.subresults)
 		for r in result_list:
-			self._subresults[r.GetName()] = r
+			self.subresults[r.GetName()] = r
 			self.SubResultsToBeIncluded().append(r.GetName())
-		subresultsAfterAdd = len(self._subresults)
+		subresultsAfterAdd = len(self.subresults)
 
 		if subresultsBeforeAdd < subresultsAfterAdd:
 			return subresultsAfterAdd - subresultsBeforeAdd
@@ -90,7 +90,7 @@ class AnnaMuMuResult():
 
 	# ______________________________________
 	def DeleteEntry(self, entry):
-		"""Delete entry in self._subresults_to_be_included
+		"""Delete entry in self.subresults_to_be_included
 
 		Arguments:
 			entry {str} --
@@ -98,7 +98,7 @@ class AnnaMuMuResult():
 
 		while True:
 			try:
-				self._subresults_to_be_included.remove(entry)
+				self.subresults_to_be_included.remove(entry)
 			except ValueError:
 				return
 
@@ -141,7 +141,7 @@ class AnnaMuMuResult():
 				self.DeleteEntry(a)
 
 	# ______________________________________
-	def GetErrorStat(self, name, subresult_name):
+	def GetErrorStat(self, name, subresult_name=''):
 		"""Get the stat. error of a value (either directly
 		or by computing the mean of the subresults).
 
@@ -158,9 +158,7 @@ class AnnaMuMuResult():
 
 		# If we specify a subresults
 		if len(subresult_name) > 0:
-
 			if not self._subresult:
-
 				error("No subresult from which \
 						I could get the {} one...".format(subresult_name))
 				return None
@@ -175,7 +173,10 @@ class AnnaMuMuResult():
 
 		# self._map existes only for AnnaMuMuResults w/o subresults
 		if self._map is not None:
-			error_stat = self._map[name][self._index.kStat]
+			try:
+				error_stat = self._map[name][self._index.kStat]
+			except KeyError:
+				return None
 			return error_stat
 
 		# Mean method (by default)
@@ -183,19 +184,20 @@ class AnnaMuMuResult():
 
 			n, werr, sumw = 0, 0., 0.
 
-			for r in self._subresults:
-				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
+			for rname in self.subresults:
+				r = self.subresults[rname]
+				if self.IsIncluded(r.GetName()) is True and r.HasValue(name) > 0:
 
 					"""
 					The stat. error is just a weighted mean of all the stat. error.
 					"""
 
 					# Check fit status
-					fitStatus = r.HasValue("FitResult") \
+					fitStatus = r.GetValue("FitResult") \
 						if r.GetValue("FitResult") is not None else 0
-					covStatus = r.HasValue("CovMatrixStatus") \
+					covStatus = r.GetValue("CovMatrixStatus") \
 						if r.GetValue("CovMatrixStatus") is not None else 3
-					chi2 = r.HasValue("FitChi2PerNDF") \
+					chi2 = r.GetValue("FitChi2PerNDF") \
 						if r.GetValue("FitChi2PerNDF") is not None else 1
 
 					# Select only Fit that converge
@@ -206,7 +208,7 @@ class AnnaMuMuResult():
 						continue
 
 					# weight and error
-					w, err = r.Weight(), r.GetErrorStat(name)
+					w, err = r.weigth, r.GetErrorStat(name)
 					debug(" --- Weight for subResults {} = {} \n".format(r.GetName(), w))
 					debug(" --- FitStatus for subresult : {}".format(r.GetValue("FitStatus")))
 					# If the error is not correct we skip the subresult
@@ -227,16 +229,18 @@ class AnnaMuMuResult():
 				return None
 			# case we have one single results
 			if n == 1:
-				for r in self._subresults:
-					if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
+				for rname in self.subresults:
+					r = self.subresults[rname]
+					if self.IsIncluded(r.GetName()) is True and r.HasValue(name) > 0:
 						return r.GetErrorStat(name)
 
 			return werr / sumw
 
 		else:
 			n, sm, sme2 = 0, 0., 0.
-			for r in self._subresults:
-				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
+			for rname in self.subresults:
+				r = self.subresults[rname]
+				if self.IsIncluded(r.GetName()) is True and r.HasValue(name) > 0:
 					err = r.GetErrorStat(name) / r.GetValue(name)
 
 					sme2 += err * err
@@ -252,7 +256,7 @@ class AnnaMuMuResult():
 		return self.name
 
 	# ______________________________________
-	def GetRMS(self, name, subresult_name):
+	def GetRMS(self, name, subresult_name=''):
 		"""Compute the rms of the subresults.
 
 		Arguments:
@@ -282,15 +286,19 @@ class AnnaMuMuResult():
 
 		# self._map existes only for AnnaMuMuResults w/o subresults
 		if self._map is not None:
-			error_sys = self._map[name][self._index.kSys]
-			return error_sys if error_sys is not None else 0.0
+			try:
+				error_sys = self._map[name][self._index.kSys]
+			except KeyError:
+				error_sys = 0.0
+			return error_sys
 
 		v1, v2, sm = 0., 0., 0.
 		n = 0
 		xmean = self.GetValue(name)
 
-		for r in self._subresults:
-			if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
+		for rname in self.subresults:
+			r = self.subresults[rname]
+			if self.IsIncluded(r.GetName()) is True and r.HasValue(name) > 0:
 
 				"""
 				The weight for each subresult is the same (=1.), since the data sample
@@ -304,11 +312,11 @@ class AnnaMuMuResult():
 				"""
 
 				# Check fit status
-				fitStatus = r.HasValue("FitResult") \
+				fitStatus = r.GetValue("FitResult") \
 					if r.GetValue("FitResult") is not None else 0
-				covStatus = r.HasValue("CovMatrixStatus") \
+				covStatus = r.GetValue("CovMatrixStatus") \
 					if r.GetValue("CovMatrixStatus") is not None else 3
-				chi2 = r.HasValue("FitChi2PerNDF") \
+				chi2 = r.GetValue("FitChi2PerNDF") \
 					if r.GetValue("FitChi2PerNDF") is not None else 1
 
 				# Select only Fit that converge
@@ -320,7 +328,7 @@ class AnnaMuMuResult():
 					)
 					continue
 
-				wi = r.Weight()
+				wi = r.weigth
 				v1 += wi
 				v2 += wi * wi
 				diff = r.GetValue(name) - xmean
@@ -334,8 +342,9 @@ class AnnaMuMuResult():
 			return 0.0
 		# case we have one single results
 		if n == 1:
-			for r in self._subresults:
-				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
+			for rname in self.subresults:
+				r = self.subresults[rname]
+				if self.IsIncluded(r.GetName()) is True and r.HasValue(name) > 0:
 					return r.GetRMS(name)
 
 		unbiased = math.sqrt((v1 / (v1 * v1 - v2)) * sm)
@@ -359,7 +368,7 @@ class AnnaMuMuResult():
 		"""
 		subresult_name_list = ''
 
-		for result in self._subresults:
+		for result in self.subresults:
 			if len(subresult_name_list) > 0:
 				subresult_name_list += ","
 
@@ -372,7 +381,7 @@ class AnnaMuMuResult():
 		return self.title
 
 	# ______________________________________
-	def GetValue(self, name, subresult_name):
+	def GetValue(self, name, subresult_name=''):
 		"""Get a value (either directly or by computing the mean of the subresults).
 
 		Default method is mean, but it can be changed with a different settings
@@ -405,16 +414,20 @@ class AnnaMuMuResult():
 
 		# self._map existes only for AnnaMuMuResults w/o subresults
 		if self._map is not None:
-			value = self._map[name][self._index.kValue]
+			try:
+				value = self._map[name][self._index.kValue]
+			except KeyError:
+				return None
 			return value
 
 		# Mean method (by default)
 		if self._resultMergingMethod == self._mergingMethod.kMean:
 
-			mean, sm = 0, 0., 0.
+			mean, sm = 0., 0.
 
-			for r in self._subresults:
-				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
+			for rname in self.subresults:
+				r = self.subresults[rname]
+				if self.IsIncluded(r.GetName()) is True and r.HasValue(name) > 0:
 
 					"""
 					The weight for each subresult is the same (=1.), since the data sample
@@ -429,12 +442,12 @@ class AnnaMuMuResult():
 					"""
 
 					# Check fit status
-					fitStatus = r.HasValue("FitResult") \
-						if r.GetValue("FitResult") > 0 else 0
-					covStatus = r.HasValue("CovMatrixStatus") \
-						if r.GetValue("CovMatrixStatus") > 0 else 3
-					chi2 = r.HasValue("FitChi2PerNDF") \
-						if r.GetValue("FitChi2PerNDF") > 0 else 1
+					fitStatus = r.GetValue("FitResult") \
+						if r.GetValue("FitResult") is not None else 0
+					covStatus = r.GetValue("CovMatrixStatus") \
+						if r.GetValue("CovMatrixStatus") is not None else 3
+					chi2 = r.GetValue("FitChi2PerNDF") \
+						if r.GetValue("FitChi2PerNDF") is not None else 1
 
 					# Select only Fit that converge
 					if (fitStatus != 0 and fitStatus != 4000) or chi2 > 2.5:
@@ -444,10 +457,12 @@ class AnnaMuMuResult():
 						continue
 
 					# weight and error
-					w = r.Weight()
+					w = r.weigth
 					debug(" --- Weight for subResults {} = {} \n".format(r.GetName(), w))
 					# If the error is not correct we skip the subresult
-					if r.GetErrorStat(name) < 0.0 or r.GetValue("FitStatus") != 0:
+					if r.GetErrorStat(name) is None:
+						continue
+					if r.GetErrorStat(name) < 0.0 or fitStatus != 0:
 						continue
 					mean += w * r.GetValue(name)
 					sm += w
@@ -462,8 +477,9 @@ class AnnaMuMuResult():
 
 		else:
 			sm = 0.
-			for r in self._subresults:
-				if self.IsIncluded(r.GetName()) is True and r.HasValue(name):
+			for rname in self.subresults:
+				r = self.subresults[rname]
+				if self.IsIncluded(r.GetName()) is True and r.HasValue(name) > 0:
 					sm += r.GetValue(name)
 
 			# Case something went wrong
@@ -474,45 +490,41 @@ class AnnaMuMuResult():
 
 			return sm
 
-	def GetWeight(self):
-		return self.weigth
-
 	# ______________________________________
-	def HasValue(self, name, subresult_name):
+	def HasValue(self, name, subresult_name=''):
 		"""Whether this result (or subresult if subresult_name is provided)
 		has a property named "name"
 		When having subresults, return the number of subresults that have this value
 		"""
 		if len(subresult_name) > 0:
-			if self._subresults is None:
+			if self.subresults is None:
 				error("Error : No subresults from which \
 				I could get the {} one...".format(subresult_name))
-				return False
+				return 0
 
-		try:
-			sub = self._subresults[subresult_name]
-		except KeyError:
-			error("Error : Could not get subresult named " + subresult_name)
-			return False
-
-		return sub.HasValue(name)
-
-		# No _subresults if results contains subresults
-		if self._subresults is not None:
 			try:
-				self._subresults[subresult_name]
+				sub = self.subresults[subresult_name]
 			except KeyError:
-				error(
-					"Error : Could not get subresult named "
-					+ subresult_name
-					+ " from map"
-				)
-				return False
-			return True
+				error("Error : Could not get subresult named " + subresult_name)
+				return 0
+
+			return sub.HasValue(name)
+
+		if self._map is not None:
+			try:
+				self._map[name]
+			except KeyError:
+				debug(
+					"Error : Don't find value " +
+					subresult_name +
+					" in map")
+				return 0
+			return 1
 
 		n = 0
-		for r in self._subresults:
-			if r.HasValue(name) is True:
+		for rname in self.subresults:
+			r = self.subresults[rname]
+			if r.HasValue(name) == 1:
 				n += 1
 
 		return n
@@ -531,11 +543,11 @@ class AnnaMuMuResult():
 
 		a = sub_result_list.split(',')
 		for s in a:
-			if self._subresults_to_be_included is None:
-				self._subresults_to_be_included = list()
+			if self.subresults_to_be_included is None:
+				self.subresults_to_be_included = list()
 
 			if self.IsIncluded(s) is False:
-				self._subresults_to_be_included.append(s)
+				self.subresults_to_be_included.append(s)
 
 	# ______________________________________
 	def IsIncluded(self, alias):
@@ -543,137 +555,135 @@ class AnnaMuMuResult():
 		whether that subresult alias should be included when computing means, etc...
 		"""
 
-		if self._subresults_to_be_included is None:
+		if self.subresults_to_be_included is None:
 			return True
 
 		try:
-			assert self._subresults_to_be_included.count(alias) == 1
+			assert self.subresults_to_be_included.count(alias) == 1
 		except AssertionError:
 			return False
 
 		return True
 
 	# ______________________________________
-	def Print(self, opt):
+	def Print(self, opt=''):
 		"""
 		printout
 		"""
 		option = opt
 		for x in range(0, 9):
 			option = option.replace(str(x), '')
-		poption = option
-		poption.replace("ALL", '')
-		poption.replace("FULL", '')
+		poption = option.replace("ALL", '')
+		poption = poption.replace("FULL", '')
 
 		print(poption + " ")
 
-		print("{} {} {}".format(
+		print(" name : {} title : {} {}".format(
 			self.GetName(),
 			self.GetTitle(),
-			" WEIGHT {}".format(self.weigth)) if self.weigth > 0.0 else ""
-		)
+			" WEIGHT {}".format(self.weigth)) if self.weigth > 0.0 else "")
 
-		if self._subresults is not None and len(self._subresults) > 1:
-			print(" (" + len(self._subresults) + " subresults)")
+		if self.subresults is not None and len(self.subresults) > 1:
+			print(" (" + str(len(self.subresults)) + " subresults)")
 
 		print("")
 
-		nsub = len(self._subresults) if self._subresults is not None else 0
+		nsub = len(self.subresults) if self.subresults is not None else 0
 		if self._map is not None:
 			for key in self._map.keys():
 				if nsub == 0 or nsub == self.HasValue(key):
-					self.PrintValue(
-						key,
-						poption,
-						self.GetValue(key),
-						self.GetErrorStat(key),
-						self.GetRMS
-					)
+					print(
+						' -- {} : {} +- {} (stat) +- {} (RMS)'
+						.format(
+							key,
+							self.GetValue(key),
+							self.GetErrorStat(key),
+							self.GetRMS(key)))
 
-		if self._subresults is not None and \
-			(option.count('ALL') > 1 or option.count('FULL') > 1):
+		if self.subresults is not None and \
+			(option.count('ALL') > 0 or option.count('FULL') > 0):
 
-			print(poption + '\t===== sub results ===== ')
-			option += "\t\t"
+			print('\t===== sub results ===== ')
 
-			for r in self._subresults:
+			for rname in self.subresults:
+				r = self.subresults[rname]
 				if self.IsIncluded(r.GetName()) is False:
 					print(" [EXCLUDED]")
 				r.Print(option)
 
-	# ______________________________________
-	def PrintValue(self, key, opt, value, errorStat, rms):
-		"""
-		print one value and its associated error
-		"""
+	# # ______________________________________
+	# def PrintValue(self, key, opt, value, errorStat, rms):
+	# 	"""
+	# 	print one value and its associated error
+	# 	"""
 
-		if key.count('AccEff') > 1:
-			print(opt + "\t\t%20s %9.2f +- %5.2f %% (%5.2f %%)".format(
-				key,
-				value * 100,
-				errorStat * 100,
-				errorStat * 100.0 / value if value != 0.0 else 0.0)
-			)
+	# 	if key.count('AccEff') > 1:
+	# 		print(opt + "\t\t%20s %9.2f +- %5.2f %% (%5.2f %%)".format(
+	# 			key,
+	# 			value * 100,
+	# 			errorStat * 100,
+	# 			errorStat * 100.0 / value if value != 0.0 else 0.0)
+	# 		)
 
-			if rms is not None:
-				print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
-			print("")
+	# 		if rms is not None:
+	# 			print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
+	# 		print("")
 
-		elif key.count('Sigma') > 1 or key.count('Mean') > 1:
-			print(opt + "\t\t%20s %9.2f +- %5.2f (%5.2f %%) MeV/c^2".format(
-				key,
-				value * 1E3,
-				1E3 * errorStat,
-				errorStat * 100.0 / value if value != 0.0 else 0.0)
-			)
+	# 	elif key.count('Sigma') > 1 or key.count('Mean') > 1:
+	# 		print(opt + "\t\t%20s %9.2f +- %5.2f (%5.2f %%) MeV/c^2".format(
+	# 			key,
+	# 			value * 1E3,
+	# 			1E3 * errorStat,
+	# 			errorStat * 100.0 / value if value != 0.0 else 0.0)
+	# 		)
 
-			if rms is not None:
-				print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
-			print("")
+	# 		if rms is not None:
+	# 			print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
+	# 		print("")
 
-		elif key.count('Nof') > 1:
-			print(opt + "\t\t%20s %9.3f +- %5.3f (%5.3f %%) MeV/c^2".format(
-				key,
-				value * 1E3,
-				1E3 * errorStat,
-				errorStat * 100.0 / value if value != 0.0 else 0.0)
-			)
+	# 	elif key.count('S') > 1:
+	# 		print(opt + "\t\t%20s %9.3f +- %5.3f (%5.3f %%) MeV/c^2".format(
+	# 			key,
+	# 			value * 1E3,
+	# 			1E3 * errorStat,
+	# 			errorStat * 100.0 / value if value != 0.0 else 0.0)
+	# 		)
 
-			if rms is not None:
-				print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
-			print("")
+	# 		if rms is not None:
+	# 			print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
+	# 		print("")
 
-		elif value > 1E-3 and value < 1E3:
-			if errorStat > 0.0:
-				print(opt + "\t\t%20s %9.3f +- %5.3f (%5.3f %%) MeV/c^2".format(
-					key,
-					value * 1E3,
-					1E3 * errorStat,
-					errorStat * 100.0 / value if value != 0.0 else 0.0)
-				)
+	# 	elif value > 1E-3 and value < 1E3:
+	# 		if errorStat > 0.0:
+	# 			print(opt + "\t\t%20s %9.3f +- %5.3f (%5.3f %%) MeV/c^2".format(
+	# 				key,
+	# 				value * 1E3,
+	# 				1E3 * errorStat,
+	# 				errorStat * 100.0 / value if value != 0.0 else 0.0)
+	# 			)
 
-				if rms is not None:
-					print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
+	# 			if rms is not None:
+	# 				print(" RMS %9.2f (%5.2f %%)".format(rms, 100.0 * rms / value))
 
-			else:
-				print(opt + "\t\t%20s %9.3f".format(key, value))
-			print("")
+	# 		else:
+	# 			print(opt + "\t\t%20s %9.3f".format(key, value))
+	# 		print("")
 
-		else:
-			if errorStat > 0.0:
-				print(opt + "\t\t%20s %9.2e +- %5.2e (%5.2f %%) MeV/c^2".format(
-					key,
-					value * 1E3,
-					1E3 * errorStat,
-					errorStat * 100.0 / value if value != 0.0 else 0.0)
-				)
+	# 	else:
+	# 		if errorStat > 0.0:
+	# 			print(opt + "\t\t%20s %9.2e +- %5.2e (%5.2f %%) MeV/c^2".format(
+	# 				key,
+	# 				value * 1E3,
+	# 				1E3 * errorStat,
+	# 				errorStat * 100.0 / value if value != 0.0 else 0.0)
+	# 			)
 
-				if rms is not None:
-					print(" RMS %9.2e (%5.2f %%)".format(rms, 100.0 * rms / value))
+	# 			if rms is not None:
+	# 				print(" RMS %9.2e (%5.2f %%)".format(rms, 100.0 * rms / value))
 
-			else:
-				print(opt + "\t\t%20s %9.2e".format(key, value))
-			print("")
+	# 		else:
+	# 			print(opt + "\t\t%20s %9.2e".format(key, value))
+	# 		print("")
 
 	# ______________________________________
 	def Scale(self, w):
@@ -705,24 +715,10 @@ class AnnaMuMuResult():
 		p[self._index.kSys] = rms
 
 	# ______________________________________
-	def SubResult(self, subresult_name):
-		"""
-		get a given subresult
-		"""
-		if self._subresults is None:
-			return None
-
-		for r in self._subresults:
-			if r.GetName() == subresult_name:
-				return r
-
-		return None
-
-	# ______________________________________
 	def SubResultsToBeIncluded(self):
-		if self._subresults_to_be_included is None:
-			self._subresults_to_be_included = list()
-		return self._subresults_to_be_included
+		if self.subresults_to_be_included is None:
+			self.subresults_to_be_included = list()
+		return self.subresults_to_be_included
 
 # =============================================================================
 # The END
