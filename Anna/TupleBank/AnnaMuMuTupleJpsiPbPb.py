@@ -30,12 +30,11 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			'AnnaMuMuTupleJpsiPbPb')
 
 		self.filter_mask = {
-			"muon_mask": 'PT>750 ** TRACK_GhostProb<0.5 ** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3 ** IP_OWNPV<3 ** PIDmu>0 ** PIDK<6 ** CosTheta<0.9999',
+			"muon_mask": 'PT>750. ** TRACK_GhostProb<0.5 ** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3. ** IP_OWNPV<3. ** PIDmu>3 ** PIDK  < 6.',
 			"mother_mask": '',
-			"other": 'nPVs>0 ** nVeloTracks >0'
-		}
+			"other": 'nPVs>0 ** nVeloTracks >0'}
 
-		# ______________________________________
+	# ______________________________________
 	def CheckChainBranch(self, chain):
 		"""Make sure the chain has the requiered leafs
 		Arguments:
@@ -62,51 +61,37 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 				return False
 
 		# mother info
-		try:
-			assert str(self.mother_leaf + '_MM') in chain.GetListOfBranches()
-		except AssertionError:
-			error(" No info {}_MM branch in chain".format(self.mother_leaf))
-			return False
-		try:
-			assert str(self.mother_leaf + '_PT') in chain.GetListOfBranches()
-		except AssertionError:
-			error(" No info {}_PT branch in chain".format(self.mother_leaf))
-			return False
-		try:
-			assert str(self.mother_leaf + '_Y') in chain.GetListOfBranches()
-		except AssertionError:
-			error(" No info {}_Y branch in chain".format(self.mother_leaf))
-			return False
+		for attr in ['_MM', '_PT', '_Y', '_Hlt1BBMicroBiasVeloDecision_Dec']:
+			try:
+				assert str(self.mother_leaf + attr) in chain.GetListOfBranches()
+			except AssertionError:
+				error(" No info {}_{} branch in chain".format(self.mother_leaf, attr))
+				return False
 
 		# dimuon info
 		for muon in self.dimuon_leafs:
-			try:
-				assert str(muon + '_PIDmu') in chain.GetListOfBranches()
-			except AssertionError:
-				error(" No info {}_PIDmu branch in chain".format(muon))
-				return False
-			try:
-				assert str(muon + '_PIDK') in chain.GetListOfBranches()
-			except AssertionError:
-				error(" No info {}_PIDK branch in chain".format(muon))
-				return False
+			for attr in ['_PIDmu', '_CosTheta', '_PIDK']:
+				try:
+					assert str(muon + attr) in chain.GetListOfBranches()
+				except AssertionError:
+					error(" No info {}_{} branch in chain".format(muon, attr))
+					return False
+
+			for axis in ['X', 'Y', 'Z', 'E']:
+				try:
+					assert str(muon + '_P' + axis) \
+						in chain.GetListOfBranches()
+				except AssertionError:
+					error(" No info {}_P{} branch in chain".format(muon, axis))
+					return False
 
 		# other
-		try:
-			assert 'eHcal' in chain.GetListOfBranches()
-		except AssertionError:
-			error(" No info eHcal branch in chain")
-			return False
-		try:
-			assert 'eEcal' in chain.GetListOfBranches()
-		except AssertionError:
-			error(" No info eEcal branch in chain")
-			return False
-		try:
-			assert 'runNumber' in chain.GetListOfBranches()
-		except AssertionError:
-			error(" No info runNumber branch in chain")
-			return False
+		for attr in ['eHcal', 'eEcal', 'runNumber']:
+			try:
+				assert attr in chain.GetListOfBranches()
+			except AssertionError:
+				error(" No info {} branch in chain".format(attr))
+				return False
 
 		return True
 
@@ -116,7 +101,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		return TNtuple(
 			self.name,
 			self.name,
-			"MM:PT:Y:OWNPV_Z:rho:DV:dZ:tZ:eHcal:eEcal:nVeloClusters:runNumber")
+			"MM:PT:Y:OWNPV_Z:rho:DV:dZ:tZ:eHcal:eEcal:nVeloClusters:runNumber:Hlt1BBMicroBiasVeloDecision")
 
 	# ______________________________________
 	def GetTuple(self, chain):
@@ -132,10 +117,11 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		print(
 			'-- other : {}'
 			.format(self.filter_mask['other'].split('**')))
-		print('''
-			\n You may also want to check \t
-			AnnaMuMuTupleJpsiPbPb::IsInLuminosityRegion()\t
-			where other cuts are also defined \n''')
+		print(
+			"\n *** You may also want to check \n"
+			" *** AnnaMuMuTupleJpsiPbPb::IsInLuminosityRegion() \n"
+			" *** and AnnaMuMuTupleJpsiPbPb::IsMuonsGhosts() \n"
+			" *** where other cuts are also defined \n")
 
 		if general_mask is None:
 			error(':GetTuple: Cannot get the mask')
@@ -152,14 +138,20 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		entry_exlude = 0
 
 		print(' --- Start running over events ...')
-		for entry in chain.withCuts(general_mask):
+		for entry in chain.withCuts(general_mask, progress=True):
 			entry_number += 1
-			if entry_number % 100 == 0:
-				print('- event {}'.format(entry_number))
+			# if entry_number % 100 == 0:
+			# 	print('- event {}'.format(entry_number))
 
 			ok_lumi, v_OWNPV, v_ENDVERTEX = self.IsInLuminosityRegion(entry_number, entry)
 			if ok_lumi is False:
 				info("entry {} does not pass the luminosity cut".format(entry_number))
+				entry_exlude += 1
+				continue
+
+			ok_ghost = self.IsMuonsGhosts(entry_number, entry)
+			if ok_ghost is False:
+				info("entry {} most likely have ghosts".format(entry_number))
 				entry_exlude += 1
 				continue
 
@@ -181,7 +173,8 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 				getattr(entry, 'eHcal'),
 				getattr(entry, 'eEcal'),
 				getattr(entry, 'nVeloClusters'),
-				getattr(entry, 'runNumber'))
+				getattr(entry, 'runNumber',
+				getattr(entry, self.mother_leaf + '_Hlt1BBMicroBiasVeloDecision_Dec')))
 
 		print(
 			' --- Done ! Ran over {} events with {:.1f}% removed from cuts !'
@@ -190,7 +183,12 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 
 	# ______________________________________
 	def IsInLuminosityRegion(self, entry_number, entry):
-		""" require mother inside luminous region """
+		"""
+		require mother inside luminous region
+
+		Returns:
+			bool -- [description]
+		"""
 		try:
 			OWNPV_X = getattr(entry, self.mother_leaf + '_OWNPV_X')
 		except AttributeError:
@@ -233,16 +231,16 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			return False, None, None
 
 		if OWNPV_Z < -200. or OWNPV_Z > 200.:
-			info("OWNPV out of range (|{}| > 200)".format(OWNPV_Z))
+			info("OWNPV out of range (|{:.0f}| > 200)".format(OWNPV_Z))
 			return False, None, None
 		if ENDVERTEX_Z < -200. or ENDVERTEX_Z > 200.:
-			info("ENDVERTEX out of range (|{}| > 200)".format(ENDVERTEX_Z))
+			info("ENDVERTEX out of range (|{:.0f}| > 200)".format(ENDVERTEX_Z))
 			return False, None, None
 
 		# goodness of the dimuon vertex
 		if TMath.Prob(ENDVERTEX_CHI2, ENDVERTEX_NDOF) < 0.5 / 100.0:
 			info(
-				"vertex chi2/ndf too low ({} < {})"
+				"vertex chi2/ndf too low ({:.3f} < {:.3f})"
 				.format(TMath.Prob(ENDVERTEX_CHI2, ENDVERTEX_NDOF), 0.5 / 100.0))
 			return False, None, None
 
@@ -254,17 +252,45 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 
 		if OWNPV_R < 0.35 or OWNPV_R > 0.95:
 			info(
-				"OWNPV_R out of range ({}), current range is 0.35-0.95"
+				"OWNPV_R out of range ({:.2f}), current range is 0.35-0.95"
 				.format(OWNPV_R))
 			return False, None, None
 		if ENDVERTEX_R < 0.35 or ENDVERTEX_R > 0.95:
 			info(
-				"ENDVERTEX_R out of range ({}), current range is 0.35-0.95"
+				"ENDVERTEX_R out of range ({:.2f}), current range is 0.35-0.95"
 				.format(ENDVERTEX_R))
 			return False, None, None
 
 		return True, v_OWNPV, v_ENDVERTEX
 
+	# ______________________________________
+	def IsMuonsGhosts(self, entry_number, entry):
+		"""
+		Check muons angle to see if not ghost particule
+
+		Returns:
+			Bool --
+		"""
+
+		try:
+			costheta_mu1 = getattr(entry, self.dimuon_leafs[0] + '_CosTheta')
+		except AttributeError:
+			warning(
+				"No info {}_CosTheta in entry {}"
+				.format(self.dimuon_leafs[0], entry_number))
+			return False
+		try:
+			costheta_mu2 = getattr(entry, self.dimuon_leafs[1] + '_CosTheta')
+		except AttributeError:
+			warning(
+				"No info {}_CosTheta in entry {}"
+				.format(self.dimuon_leafs[1], entry_number))
+			return False
+
+		if costheta_mu1 > 0.9999 and costheta_mu2 > 0.9999:
+			return False
+		else:
+			return True
 
 # =============================================================================
 # The END

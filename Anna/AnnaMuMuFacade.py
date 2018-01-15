@@ -81,7 +81,7 @@ class AnnaMuMuFacade:
 
 		print(" ================================================================ ")
 		print("     CreateFilteredTuple with Tuple {} ".format(tuple_filter_name))
-		print(" ================================================================ ")
+		print(" ================================================================ \n\n")
 
 		# Check data type
 		if self._data is not None:
@@ -122,7 +122,7 @@ class AnnaMuMuFacade:
 					if ntuple is not None:
 						self.SaveResult(
 							ntuple,
-							'Tuple/{}/{}'.format(mother_leaf, tuple_filter_name))
+							'Tuple/{}'.format(mother_leaf))
 					else:
 						error("CreateFilteredTuple: Cannot get Tuple")
 						continue
@@ -324,8 +324,7 @@ class AnnaMuMuFacade:
 			result_path {[type]} -- path inside AnnaResults.root
 		"""
 
-		# Create / get results file in the local directory """
-
+		# Create / get results file in the local directory """ 
 		db = self.GetResultFile()
 
 		if db is not None:
