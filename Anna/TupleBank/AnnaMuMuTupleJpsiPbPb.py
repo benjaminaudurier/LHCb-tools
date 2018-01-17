@@ -6,9 +6,9 @@
 
 from logging import error
 from .AnnaMuMuTupleBase import AnnaMuMuTupleBase
-from ROOT import TNtuple, TVector3, TMath
+from ROOT import TNtuple, TVector3, TMath, TLorentzVector
 from Ostap.PyRoUts import *
-from logging import info, warning
+from logging import info
 
 # ______________________________________
 class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
@@ -29,14 +29,14 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			dimuon_leafs,
 			'AnnaMuMuTupleJpsiPbPb')
 
-		self.filter_mask = {
-			"muon_mask":
-				'PT>750. ** TRACK_GhostProb<0.5'
-				'** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3. ** IP_OWNPV<3.'
-				'** PIDmu>3 ** PIDK  < 6. ** ETA < 4.5 ** ETA > 2.0',
-			"mother_mask":
-				'Y  < 4.5 ** Y > 2.0',
-			"other": 'nPVs>0 ** nVeloTracks >0'}
+		self.filter_mask["muon_mask"] = 'PT>750. '\
+			'** TRACK_GhostProb<0.5'\
+			'** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3.'\
+			'** IP_OWNPV<3.** PIDmu > 3** ETA < 4.5 ** ETA > 2.0 '
+
+		self.filter_mask["mother_mask"] = 'Y  < 4.5 '\
+			'** Y > 2.0 '\
+			'** MM < 3196.900 ** MM > 2996.900'
 
 	# ______________________________________
 	def CheckChainBranch(self, chain):
@@ -65,7 +65,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 				return False
 
 		# mother info
-		for attr in ['_MM', '_PT', '_Y', '_Hlt1BBMicroBiasVeloDecision_Dec']:
+		for attr in ['_MM', '_PT', '_Y']:
 			try:
 				assert str(self.mother_leaf + attr) in chain.GetListOfBranches()
 			except AssertionError:
@@ -90,7 +90,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 					return False
 
 		# other
-		for attr in ['eHcal', 'eEcal', 'runNumber']:
+		for attr in ['eHcal', 'eEcal']:
 			try:
 				assert attr in chain.GetListOfBranches()
 			except AssertionError:
@@ -105,11 +105,24 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		return TNtuple(
 			self.name,
 			self.name,
-			"MM:PT:Y:OWNPV_Z:rho:DV:dZ:tZ:eHcal:eEcal"
-			":nVeloClusters:runNumber:Hlt1BBMicroBiasVeloDecision")
+			"MM:PT:Y:Z:DV:dZ:tZ"
+			":plusPIDmu:minusPIDmu:plusPIDK:minusPIDK"
+			":Hcal:Ecal:nVeloClusters")
 
 	# ______________________________________
 	def GetTuple(self, chain):
+		"""The main method of the class
+
+		Here the class run in all events in the tree/chain
+		and return a filled new tuple for events passing the
+		selection
+
+		Arguments:
+			chain {TChain}
+
+		Returns:
+			TNtuple
+		"""
 
 		general_mask = self.GetGeneralMask()
 		print(" ----> The following general mask will be applyied to the chain : \n")
@@ -141,21 +154,22 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		# counters
 		entry_number = 0
 		entry_exlude = 0
+		muon_all = list()
 
 		print(' --- Start running over events ...')
 		for entry in chain.withCuts(general_mask, progress=True):
 			entry_number += 1
-			# if entry_number % 100 == 0:
-			# 	print('- event {}'.format(entry_number))
 
+			# Check the vertex position
 			ok_lumi, v_OWNPV, v_ENDVERTEX = self.IsInLuminosityRegion(entry_number, entry)
 			if ok_lumi is False:
 				info("entry {} does not pass the luminosity cut".format(entry_number))
 				entry_exlude += 1
 				continue
 
-			ok_ghost = self.IsMuonsGhosts(entry_number, entry)
-			if ok_ghost is False:
+			# Check muon ghost probability
+			is_ghost = self.IsMuonsGhosts(entry_number, entry, muon_all)
+			if is_ghost is True:
 				info("entry {} most likely have ghosts".format(entry_number))
 				entry_exlude += 1
 				continue
@@ -163,7 +177,8 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			# Prepare Data
 			rho = v_OWNPV.Perp()
 			v_OWNPV -= v_ENDVERTEX
-			dZ = (getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') - getattr(entry, self.mother_leaf + '_OWNPV_Z')) * 1e-3
+			dZ = (getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') -
+					getattr(entry, self.mother_leaf + '_OWNPV_Z')) * 1e-3
 			tZ = dZ * 3096.916 / (getattr(entry, self.mother_leaf + '_PZ') * TMath.C())
 
 			ntuple.Fill(
@@ -175,11 +190,13 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 				v_OWNPV.Mag(),
 				dZ,
 				tZ,
+				getattr(entry, self.dimuon_leafs[0] + '_PIDmu'),
+				getattr(entry, self.dimuon_leafs[1] + '_PIDmu'),
+				getattr(entry, self.dimuon_leafs[0] + '_PIDK'),
+				getattr(entry, self.dimuon_leafs[1] + '_PIDK'),
 				getattr(entry, 'eHcal'),
 				getattr(entry, 'eEcal'),
-				getattr(entry, 'nVeloClusters'),
-				getattr(entry, 'runNumber',
-				getattr(entry, self.mother_leaf + '_Hlt1BBMicroBiasVeloDecision_Dec')))
+				getattr(entry, 'nVeloClusters'))
 
 		print(
 			' --- Done ! Ran over {} events with {:.1f}% removed from cuts !'
@@ -192,48 +209,16 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		require mother inside luminous region
 
 		Returns:
-			bool -- [description]
+			bool
 		"""
-		try:
-			OWNPV_X = getattr(entry, self.mother_leaf + '_OWNPV_X')
-		except AttributeError:
-			warning("No info {}_OWNPV_X in entry {}".format(self.mother_leaf, entry_number))
-			return False, None, None
-		try:
-			OWNPV_Y = getattr(entry, self.mother_leaf + '_OWNPV_Y')
-		except AttributeError:
-			warning("No info {}_OWNPV_Y in entry {}".format(self.mother_leaf, entry_number))
-			return False, None, None
-		try:
-			OWNPV_Z = getattr(entry, self.mother_leaf + '_OWNPV_Z')
-		except AttributeError:
-			warning("No info {}_OWNPV_Z in entry {}".format(self.mother_leaf, entry_number))
-			return False, None, None
-		try:
-			ENDVERTEX_X = getattr(entry, self.mother_leaf + '_ENDVERTEX_X')
-		except AttributeError:
-			warning("No info {}_ENDVERTEX_X in entry {}".format(self.mother_leaf, entry_number))
-			return False, None, None
-		try:
-			ENDVERTEX_Y = getattr(entry, self.mother_leaf + '_ENDVERTEX_Y')
-		except AttributeError:
-			warning("No info {}_ENDVERTEX_Y in entry {}".format(self.mother_leaf, entry_number))
-			return False, None, None
-		try:
-			ENDVERTEX_Z = getattr(entry, self.mother_leaf + '_ENDVERTEX_Z')
-		except AttributeError:
-			warning("No info {}_ENDVERTEX_Z in entry {}".format(self.mother_leaf, entry_number))
-			return False, None, None
-		try:
-			ENDVERTEX_CHI2 = getattr(entry, self.mother_leaf + '_ENDVERTEX_CHI2')
-		except AttributeError:
-			warning("No info {}_ENDVERTEX_CHI2 in entry {}".format(self.mother_leaf, entry_number))
-			return False, None, None
-		try:
-			ENDVERTEX_NDOF = getattr(entry, self.mother_leaf + '_ENDVERTEX_NDOF')
-		except AttributeError:
-			warning("No info {}_ENDVERTEX_NDOF in entry {}".format(self.mother_leaf, entry_number))
-			return False, None, None
+		OWNPV_X = getattr(entry, self.mother_leaf + '_OWNPV_X')
+		OWNPV_Y = getattr(entry, self.mother_leaf + '_OWNPV_Y')
+		OWNPV_Z = getattr(entry, self.mother_leaf + '_OWNPV_Z')
+		ENDVERTEX_X = getattr(entry, self.mother_leaf + '_ENDVERTEX_X')
+		ENDVERTEX_Y = getattr(entry, self.mother_leaf + '_ENDVERTEX_Y')
+		ENDVERTEX_Z = getattr(entry, self.mother_leaf + '_ENDVERTEX_Z')
+		ENDVERTEX_CHI2 = getattr(entry, self.mother_leaf + '_ENDVERTEX_CHI2')
+		ENDVERTEX_NDOF = getattr(entry, self.mother_leaf + '_ENDVERTEX_NDOF')
 
 		if OWNPV_Z < -200. or OWNPV_Z > 200.:
 			info("OWNPV out of range (|{:.0f}| > 200)".format(OWNPV_Z))
@@ -269,33 +254,40 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		return True, v_OWNPV, v_ENDVERTEX
 
 	# ______________________________________
-	def IsMuonsGhosts(self, entry_number, entry):
+	def IsMuonsGhosts(self, entry_number, entry, all_muons):
 		"""
 		Check muons angle to see if not ghost particule
 
 		Returns:
-			Bool --
+			Bool
 		"""
 
-		try:
-			costheta_mu1 = getattr(entry, self.dimuon_leafs[0] + '_CosTheta')
-		except AttributeError:
-			warning(
-				"No info {}_CosTheta in entry {}"
-				.format(self.dimuon_leafs[0], entry_number))
-			return False
-		try:
-			costheta_mu2 = getattr(entry, self.dimuon_leafs[1] + '_CosTheta')
-		except AttributeError:
-			warning(
-				"No info {}_CosTheta in entry {}"
-				.format(self.dimuon_leafs[1], entry_number))
-			return False
+		muP = TLorentzVector()
+		muM = TLorentzVector()
+		muP.SetPxPyPzE(
+			getattr(entry, self.dimuon_leafs[0] + '_PX'),
+			getattr(entry, self.dimuon_leafs[0] + '_PY'),
+			getattr(entry, self.dimuon_leafs[0] + '_PZ'),
+			getattr(entry, self.dimuon_leafs[0] + '_PE'))
+		muM.SetPxPyPzE(
+			getattr(entry, self.dimuon_leafs[1] + '_PX'),
+			getattr(entry, self.dimuon_leafs[1] + '_PY'),
+			getattr(entry, self.dimuon_leafs[1] + '_PZ'),
+			getattr(entry, self.dimuon_leafs[1] + '_PE'))
 
-		if costheta_mu1 > 0.9999 and costheta_mu2 > 0.9999:
+		if entry_number == 1:
+			all_muons.append([muP, muM])
 			return False
 		else:
-			return True
+
+			for cand in all_muons:
+				deltaThetaMuM = cand[0].Angle(muP.Vect())
+				deltaThetaMuM = cand[1].Angle(muM.Vect())
+
+				if deltaThetaMuM > 0.9999 and deltaThetaMuM > 0.9999:
+					return True
+		all_muons.append([muP, muM])
+		return False
 
 # =============================================================================
 # The END
