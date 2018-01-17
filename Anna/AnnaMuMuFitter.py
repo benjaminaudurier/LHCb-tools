@@ -37,13 +37,14 @@ class AnnaMuMuFitter:
 		# Centrality percentage based on VELO cluster cut
 		self._centrality = {
 			"branch": "nVeloClusters",
-			"90_100": [0, 1311],
-			"80_90": [1311, 3009],
-			"70_80": [3009, 5580],
-			"60_70": [5580, 9685],
-			"50_60": [9685, 15417],
-			"40_50": [15417, 22473],
-			"70_90": [1311, 9685]}
+			"90_100": [1311, 0],
+			"80_90": [3009, 1311],
+			"70_80": [5580, 3009],
+			"60_70": [9685, 5580],
+			"50_60": [15417, 9685],
+			"40_50": [22473, 15417],
+			"60_90": [9685, 1311],
+			"70_90": [5580, 1311]}
 
 		# Adopt binning
 		self._binning, self._2D = self.CheckBinning(binning)
@@ -60,7 +61,7 @@ class AnnaMuMuFitter:
 		# Mass map
 		self._mass_map = {
 			"JPsi": ROOT.RooRealVar(
-				'JPsi_mass', 'J/psi(1S) mass', 2900., 3200.),
+				'JPsi_mass', 'J/psi(1S) mass', 2900., 3300.),
 			"PsiP": ROOT.RooRealVar(
 				'PsiP_mass', 'Psi(2S) mass', 3600., 3800.),
 			"Upsilon": ROOT.RooRealVar(
@@ -206,11 +207,11 @@ class AnnaMuMuFitter:
 		try:
 			assert cut != "#"
 		except AssertionError:
-			warning("skip specific cut ({})".format(centrality))
+			warning("skip specific cut ({})".format(cut))
 			add_cut = False
 
 		if add_centrality is True:
-			cut_update += " && {0}>{1} && {0}<{2}".format(
+			cut_update += " && {0}>{2} && {0}<{1}".format(
 				self._centrality["branch"],
 				self._centrality[centrality][0],
 				self._centrality[centrality][1])
@@ -250,7 +251,7 @@ class AnnaMuMuFitter:
 			background = getattr(Models, self._fit_key['bkgr'])(
 				'bkgr',
 				mass=self._mass_map[self._particle_name],
-                power=int(param['power']))
+				power=int(param['power']))
 		else:
 			warning(
 				'{} has not default value setted, we encourage you to implement the code'
@@ -280,8 +281,8 @@ class AnnaMuMuFitter:
 		sig = getattr(Models, self._fit_key['signal'])(
 			'signal',
 			mass=self._mass_map[self._particle_name],
-			mn=self._mass_map[self._particle_name].getMin(),
-			mx=self._mass_map[self._particle_name].getMax(),
+			# mn=self._mass_map[self._particle_name].getMin(),
+			# mx=self._mass_map[self._particle_name].getMax(),
 			sigma=self._width_map[self._particle_name])
 
 		# Due to Ostap architectur, data members of PDF can't be set
@@ -290,7 +291,6 @@ class AnnaMuMuFitter:
 
 		# ---- Configure CB2 ----
 		if self._fit_key['signal'] == 'CB2_pdf':
-
 			# Default value
 			param = {
 				'alL': ROOT.RooRealVar('aL', 'aL', 0.01, 0.5),
@@ -310,6 +310,25 @@ class AnnaMuMuFitter:
 				alphaR=param['alR'],
 				nL=param['nL'],
 				nR=param['nR'])
+
+		# ---- Configure CrystalBall ----
+		elif self._fit_key['signal'] == 'CrystalBall_pdf':
+			# Default value
+			param = {
+				'alpha': ROOT.RooRealVar('alpha', 'alpha', 1.5, 2.5),
+				'n': ROOT.RooRealVar('n', 'n', 0.5, 1.5)}
+
+			self.UpdateParameters(param)
+
+			sig = getattr(Models, self._fit_key['signal'])(
+				'signal',
+				mass=self._mass_map[self._particle_name],
+				# mn=self._mass_map[self._particle_name].getMin(),
+				# mx=self._mass_map[self._particle_name].getMax(),
+				sigma=self._width_map[self._particle_name],
+				alpha=param['alpha'],
+				n=param['n'])
+
 		else:
 			warning(
 				'{} has not default value setted, we encourage you to implement the code'
@@ -352,9 +371,11 @@ class AnnaMuMuFitter:
 		# Check that keys appear only once in the string
 		for x in self._fit_key.keys():
 			try:
-				assert fit_type.count(x) < 2
+				assert fit_type.count(str(x + '=')) < 2
 			except AssertionError:
-				error(" Oups ! Multiple entries for {}, please fix it !".format(x))
+				error(
+					" Oups ! Multiple entries for {}, please fix it !"
+					.format(x))
 				return False
 
 		# Fill self._fit_key and self._fit_attribute
@@ -479,33 +500,6 @@ class AnnaMuMuFitter:
 			background = self.CreateBackgroundPDF()
 			if background is None:
 				continue
-
-			# start by fitting the background
-			# mean = self._mass_map[self._particle_name].getMin() + (
-			# 	self._mass_map[self._particle_name].getMax() -
-			# 	self._mass_map[self._particle_name].getMin())/2
-			# self._mass_map[self._particle_name].setRange(
-			# 	"Range1",
-			# 	self._mass_map[self._particle_name].getMin(),
-			# 	mean - self._width_map[self._particle_name].getMax())
-			# self._mass_map[self._particle_name].setRange(
-			# 	"Range2",
-			# 	mean + self._width_map[self._particle_name].getMax(),
-			# 	self._mass_map[self._particle_name].getMax())
-
-			# bck_range = ROOT.RooRealVar(
-			# 	"bck_range",
-			# 	"bck_range",
-			# 	self._mass_map[self._particle_name].getMin(),
-			# 	mean - self._width_map[self._particle_name].getMax())
-
-			# background.fitTo(
-			# 	histo,
-			# 	sumw2=True,
-			# 	silent=True,
-			# 	draw=False,
-			# 	refit=False,
-			# 	chi2=False)
 
 			# return None
 			model = Models.Fit1D(signal=signal, background=background)
@@ -725,12 +719,8 @@ class AnnaMuMuFitter:
 						varmin,
 						varmax)
 					param[attribute] = var
-					print param[attribute]
-					print type(param[attribute])
 				else:
 					param[attribute] = float(self._fit_key[attribute])
-					print param[attribute]
-					print type(param[attribute])
 
 				info(
 					'Change default value of {} (= {}) for signal PDF'

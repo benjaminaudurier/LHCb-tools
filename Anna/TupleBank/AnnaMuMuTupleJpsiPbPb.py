@@ -30,8 +30,12 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			'AnnaMuMuTupleJpsiPbPb')
 
 		self.filter_mask = {
-			"muon_mask": 'PT>750. ** TRACK_GhostProb<0.5 ** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3. ** IP_OWNPV<3. ** PIDmu>3 ** PIDK  < 6.',
-			"mother_mask": '',
+			"muon_mask":
+				'PT>750. ** TRACK_GhostProb<0.5'
+				'** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3. ** IP_OWNPV<3.'
+				'** PIDmu>3 ** PIDK  < 6. ** ETA < 4.5 ** ETA > 2.0',
+			"mother_mask":
+				'Y  < 4.5 ** Y > 2.0',
 			"other": 'nPVs>0 ** nVeloTracks >0'}
 
 	# ______________________________________
@@ -70,7 +74,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 
 		# dimuon info
 		for muon in self.dimuon_leafs:
-			for attr in ['_PIDmu', '_CosTheta', '_PIDK']:
+			for attr in ['_PIDmu', '_CosTheta', '_PIDK', '_ETA']:
 				try:
 					assert str(muon + attr) in chain.GetListOfBranches()
 				except AssertionError:
@@ -101,7 +105,8 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		return TNtuple(
 			self.name,
 			self.name,
-			"MM:PT:Y:OWNPV_Z:rho:DV:dZ:tZ:eHcal:eEcal:nVeloClusters:runNumber:Hlt1BBMicroBiasVeloDecision")
+			"MM:PT:Y:OWNPV_Z:rho:DV:dZ:tZ:eHcal:eEcal"
+			":nVeloClusters:runNumber:Hlt1BBMicroBiasVeloDecision")
 
 	# ______________________________________
 	def GetTuple(self, chain):
