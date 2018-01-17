@@ -9,6 +9,7 @@ from .AnnaMuMuFitter import AnnaMuMuFitter
 # Tuple bank
 import TupleBank as TupleBank
 import TupleBank.AnnaMuMuTupleJpsiPbPb
+import TupleBank.AnnaMuMuTupleJpsiPbPbV2
 # ROOT and Ostap
 import ROOT
 import Ostap
@@ -18,7 +19,11 @@ from Ostap.PyRoUts import *
 import sys
 import logging
 from logging import debug, error, info, warning
-logging.basicConfig(format='%(filename)s:%(funcName)s:%(levelname)s:%(message)s', level=logging.DEBUG)
+logging.basicConfig(
+	filename='Anna.log',
+	format='%(filename)s -- %(funcName)s -- %(levelname)s: \t\t %(message)s',
+	level=logging.DEBUG,
+	filemode='w+')
 
 # ______________________________________
 class AnnaMuMuFacade:
@@ -108,13 +113,13 @@ class AnnaMuMuFacade:
 					try:
 						module = getattr(TupleBank, tuple_filter_name)
 					except AttributeError:
-						error('Cannot find AnnaMuMuTuple{} module'.format(tuple_filter_name))
+						error('Cannot find {} module'.format(tuple_filter_name))
 
 					# Instance the object
 					try:
 						mumu_tuple = getattr(module, tuple_filter_name)(mother_leaf, dimuon_leaf)
 					except AttributeError:
-						error('Cannot find AnnaMuMuTuple{} instance'.format(tuple_filter_name))
+						error('Cannot find {} instance'.format(tuple_filter_name))
 
 					# Get the tuple
 					ntuple = mumu_tuple.GetTuple(self._data)
