@@ -1,5 +1,5 @@
-#define Filter_jpsi_PbPb_2015_lxplus_cxx
-// The class definition in Filter_jpsi_PbPb_2015_lxplus.h has been generated automatically
+#define Selector_jpsi_and_D0_PbPb_2015_cxx
+// The class definition in Selector_jpsi_and_D0_PbPb_2015.h has been generated automatically
 // by the ROOT utility TTree::MakeSelector(). This class is derived
 // from the ROOT class TSelector. For more information on the TSelector
 // framework see $ROOTSYS/README/README.SELECTOR or the ROOT User Manual.
@@ -19,13 +19,13 @@
 //
 // To use this file, try the following session on your Tree T:
 //
-// root> T->Process("Filter_jpsi_PbPb_2015_lxplus.C")
-// root> T->Process("Filter_jpsi_PbPb_2015_lxplus.C","some options")
-// root> T->Process("Filter_jpsi_PbPb_2015_lxplus.C+")
+// root> T->Process("Selector_jpsi_and_D0_PbPb_2015.C")
+// root> T->Process("Selector_jpsi_and_D0_PbPb_2015.C","some options")
+// root> T->Process("Selector_jpsi_and_D0_PbPb_2015.C+")
 //
 
 
-#include "Filter_jpsi_PbPb_2015_lxplus.h"
+#include "Selector_jpsi_and_D0_PbPb_2015.h"
 #include <TH2.h>
 #include <TStyle.h>
 #include <TNtuple.h>
@@ -36,7 +36,7 @@
 #include <TLorentzVector.h>
 
 // ______________________________________________________
-void Filter_jpsi_PbPb_2015_lxplus::Begin(TTree * /*tree*/)
+void Selector_jpsi_and_D0_PbPb_2015::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
    // When running with PROOF Begin() is only called on the client.
@@ -46,7 +46,7 @@ void Filter_jpsi_PbPb_2015_lxplus::Begin(TTree * /*tree*/)
 }
 
 // ______________________________________________________
-void Filter_jpsi_PbPb_2015_lxplus::SlaveBegin(TTree * /*tree*/)
+void Selector_jpsi_and_D0_PbPb_2015::SlaveBegin(TTree * /*tree*/)
 {
    // The SlaveBegin() function is called after the Begin() function.
    // When running with PROOF SlaveBegin() is called on each slave server.
@@ -211,7 +211,7 @@ void Filter_jpsi_PbPb_2015_lxplus::SlaveBegin(TTree * /*tree*/)
 }
 
 // ______________________________________________________
-Bool_t Filter_jpsi_PbPb_2015_lxplus::Process(Long64_t entry)
+Bool_t Selector_jpsi_and_D0_PbPb_2015::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
    // keyed object in the case of PROOF) to be processed. The entry argument
@@ -289,7 +289,7 @@ Bool_t Filter_jpsi_PbPb_2015_lxplus::Process(Long64_t entry)
 }
 
 // ______________________________________________________
-void Filter_jpsi_PbPb_2015_lxplus::SlaveTerminate()
+void Selector_jpsi_and_D0_PbPb_2015::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
    // have been processed. When running with PROOF SlaveTerminate() is called
@@ -299,7 +299,7 @@ void Filter_jpsi_PbPb_2015_lxplus::SlaveTerminate()
 
 
 // ______________________________________________________
-void Filter_jpsi_PbPb_2015_lxplus::Terminate()
+void Selector_jpsi_and_D0_PbPb_2015::Terminate()
 {
    // The Terminate() function is the last function to be called during
    // a query. It always runs on the client, it can be used to present
@@ -312,21 +312,21 @@ void Filter_jpsi_PbPb_2015_lxplus::Terminate()
 
 
    // save results
-   TFile outputfile("Filter_jpsi_PbPb_2015_lxplus.root","recreate");
+   TFile outputfile("Selector_jpsi_and_D0_PbPb_2015.root","recreate");
    nt->Write();
    hruns->Write();
    hsparse->Write();
 
    outputfile.Close();
 
-   if ( GetOutputList()->FindObject("mum") ) delete GetOutputList()->FindObject("mum") ;
-   if ( GetOutputList()->FindObject("mup") ) delete GetOutputList()->FindObject("mup") ;
+   // if ( GetOutputList()->FindObject("mum") ) delete GetOutputList()->FindObject("mum") ;
+   // if ( GetOutputList()->FindObject("mup") ) delete GetOutputList()->FindObject("mup") ;
 
 }
 
 
 // ______________________________________________________
-bool Filter_jpsi_PbPb_2015_lxplus::hasGhosts()
+bool Selector_jpsi_and_D0_PbPb_2015::hasGhosts()
 {
    // check if a candidate is formed by muons extremely close to previous candidates
 
@@ -377,7 +377,7 @@ bool Filter_jpsi_PbPb_2015_lxplus::hasGhosts()
 }
 
 // ______________________________________________________
-Int_t Filter_jpsi_PbPb_2015_lxplus::IsEventSelected()
+Int_t Selector_jpsi_and_D0_PbPb_2015::IsEventSelected()
 {
    // This function may be called from Loop.
    // returns  1 if entry is accepted.

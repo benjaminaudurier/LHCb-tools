@@ -4,8 +4,8 @@
 // from TChain Jpsi/DecayTree/
 //////////////////////////////////////////////////////////
 
-#ifndef Filter_jpsi_PbPb_2015_lxplus_h
-#define Filter_jpsi_PbPb_2015_lxplus_h
+#ifndef Selector_jpsi_and_D0_PbPb_2015_h
+#define Selector_jpsi_and_D0_PbPb_2015_h
 
 #include <TROOT.h>
 #include <TChain.h>
@@ -19,7 +19,7 @@
 // Headers needed by this particular selector
 
 
-class Filter_jpsi_PbPb_2015_lxplus : public TSelector {
+class Selector_jpsi_and_D0_PbPb_2015 : public TSelector {
 public :
    TTreeReader     fReader;  //!the tree reader
    TTree          *fChain = 0;   //!pointer to the analyzed TTree or TChain
@@ -1351,8 +1351,8 @@ public :
    TTreeReaderValue<Int_t> rVeloClusters = {fReader, "rVeloClusters"};
 
 
-   Filter_jpsi_PbPb_2015_lxplus(TTree * /*tree*/ =0) {}
-   virtual ~Filter_jpsi_PbPb_2015_lxplus() {}
+   Selector_jpsi_and_D0_PbPb_2015(TTree * /*tree*/ =0) {}
+   virtual ~Selector_jpsi_and_D0_PbPb_2015() {}
    virtual Int_t   Version() const { return 2; }
    virtual void    Begin(TTree *tree);
    virtual void    SlaveBegin(TTree *tree);
@@ -1371,14 +1371,14 @@ public :
    Int_t    IsEventSelected();
    bool    hasGhosts();
 
-   ClassDef(Filter_jpsi_PbPb_2015_lxplus,0);
+   ClassDef(Selector_jpsi_and_D0_PbPb_2015,0);
 
 };
 
 #endif
 
-#ifdef Filter_jpsi_PbPb_2015_lxplus_cxx
-void Filter_jpsi_PbPb_2015_lxplus::Init(TTree *tree)
+#ifdef Selector_jpsi_and_D0_PbPb_2015_cxx
+void Selector_jpsi_and_D0_PbPb_2015::Init(TTree *tree)
 {
    // The Init() function is called when the selector needs to initialize
    // a new tree or chain. Typically here the reader is initialized.
@@ -1390,7 +1390,7 @@ void Filter_jpsi_PbPb_2015_lxplus::Init(TTree *tree)
    fReader.SetTree(tree);
 }
 
-Bool_t Filter_jpsi_PbPb_2015_lxplus::Notify()
+Bool_t Selector_jpsi_and_D0_PbPb_2015::Notify()
 {
    // The Notify() function is called when a new file is opened. This
    // can be either for a new TTree in a TChain or when when a new TTree
@@ -1402,4 +1402,4 @@ Bool_t Filter_jpsi_PbPb_2015_lxplus::Notify()
 }
 
 
-#endif // #ifdef Filter_jpsi_PbPb_2015_lxplus_cxx
+#endif // #ifdef Selector_jpsi_and_D0_PbPb_2015_cxx
