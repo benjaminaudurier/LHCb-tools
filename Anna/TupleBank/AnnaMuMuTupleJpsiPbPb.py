@@ -29,14 +29,12 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			dimuon_leafs,
 			'AnnaMuMuTupleJpsiPbPb')
 
-		self.filter_mask["muon_mask"] = 'PT>750. '\
-			'** TRACK_GhostProb<0.5'\
+		self.filter_mask["muon_mask"] = 'TRACK_GhostProb<0.5'\
 			'** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3.'\
-			'** IP_OWNPV<3.** PIDmu > 3** ETA < 4.5 ** ETA > 2.0 '
+			'** IP_OWNPV<3.** PIDmu > 0 ** ETA < 4.5 ** ETA > 2.0 '
 
-		self.filter_mask["mother_mask"] = 'Y  < 4.5 '\
-			'** Y > 2.0 '\
-			'** MM < 3196.900 ** MM > 2996.900'
+		self.filter_mask["mother_mask"] = ''
+
 
 	# ______________________________________
 	def CheckChainBranch(self, chain):
@@ -178,7 +176,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			rho = v_OWNPV.Perp()
 			v_OWNPV -= v_ENDVERTEX
 			dZ = (getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') -
-					getattr(entry, self.mother_leaf + '_OWNPV_Z')) * 1e-3
+				getattr(entry, self.mother_leaf + '_OWNPV_Z')) * 1e-3
 			tZ = dZ * 3096.916 / (getattr(entry, self.mother_leaf + '_PZ') * TMath.C())
 
 			ntuple.Fill(
@@ -186,7 +184,6 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 				getattr(entry, self.mother_leaf + '_PT'),
 				getattr(entry, self.mother_leaf + '_Y'),
 				getattr(entry, self.mother_leaf + '_OWNPV_Z'),
-				rho,
 				v_OWNPV.Mag(),
 				dZ,
 				tZ,
