@@ -1,12 +1,12 @@
 # =============================================================================
-## @class AnnaMuMuTupleBase
+## @class AnnaTupleBase
 #  Mother class of all the sparse
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-12-21
 
 from logging import error, warning,info
 
-class AnnaMuMuTupleBase:
+class AnnaTupleBase:
 
 	# ______________________________________
 	def __init__(self, mother_leaf='', dimuon_leafs=['', ''], name=''):
@@ -28,7 +28,7 @@ class AnnaMuMuTupleBase:
 
 		exemple :
 			"mother_mask": 'Y  < 4.5 ** Y > 2.0 ** MM < 3196.900 ** MM > 2996.900'
-		For more detailed example, see AnnaMuMuSparseJpsiPbPb
+		For more detailed example, see AnnaSparseJpsiPbPb
 
 		Arguments:
 			name {str}
@@ -53,7 +53,7 @@ class AnnaMuMuTupleBase:
 	def GetGeneralMask(self):
 
 		if self.filter_mask is None:
-			error("AnnaMuMuTupleBase:GetGeneralMask: no filter mask !")
+			error("AnnaTupleBase:GetGeneralMask: no filter mask !")
 			return None
 
 		# Get masks

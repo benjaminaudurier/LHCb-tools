@@ -1,5 +1,5 @@
 # =============================================================================
-#  @class AnnaMuMuResult
+#  @class AnnaResult
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30
 
@@ -23,12 +23,12 @@ class Index():
 
 
 # ______________________________________
-class AnnaMuMuResult():
+class AnnaResult():
 	"""Store results for the Anna framework
 
 	Base class to hold a set of results of the same quantity,
 	computed using various methods, each with their errors.
-	A AnnaMuMuResult can hold other AnnaMuMuResult, refered as
+	A AnnaResult can hold other AnnaResult, refered as
 	subresults later.
 
 	"""
@@ -45,7 +45,7 @@ class AnnaMuMuResult():
 			histo {TH1} -- (default: {None})
 		"""
 
-		# General for all AnnaMuMuResult
+		# General for all AnnaResult
 		self.name = name
 		self.title = title
 		self.subresults = None  # dict()
@@ -68,7 +68,7 @@ class AnnaMuMuResult():
 		"""Adopt all results in the result list
 
 		Arguments:
-			result_list {list()} -- Must contains AnnaMuMuResults
+			result_list {list()} -- Must contains AnnaResults
 
 		Returns:
 			int -- number of subresults stored
@@ -171,7 +171,7 @@ class AnnaMuMuResult():
 
 			return sub.GetErrorStat(name)
 
-		# self._map existes only for AnnaMuMuResults w/o subresults
+		# self._map existes only for AnnaResults w/o subresults
 		if self._map is not None:
 			try:
 				error_stat = self._map[name][self._index.kStat]
@@ -284,7 +284,7 @@ class AnnaMuMuResult():
 
 			return sub.GetRMS(name)
 
-		# self._map existes only for AnnaMuMuResults w/o subresults
+		# self._map existes only for AnnaResults w/o subresults
 		if self._map is not None:
 			try:
 				error_sys = self._map[name][self._index.kSys]
@@ -412,7 +412,7 @@ class AnnaMuMuResult():
 
 			return sub.GetValue(name)
 
-		# self._map existes only for AnnaMuMuResults w/o subresults
+		# self._map existes only for AnnaResults w/o subresults
 		if self._map is not None:
 			try:
 				value = self._map[name][self._index.kValue]

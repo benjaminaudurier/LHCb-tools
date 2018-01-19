@@ -1,12 +1,12 @@
 # =============================================================================
-## @class AnnaMuMuConfig
+## @class AnnaConfig
 #  helper class to store steering options for other Anna classes
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30
 from logging import debug, warning
 import ROOT
 
-class AnnaMuMuConfig:
+class AnnaConfig:
 	"""Helper class to store steering options for other Anna classes
 
 	This class reads an extern text file and store info in a dictionnary.

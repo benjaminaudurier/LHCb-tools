@@ -1,18 +1,18 @@
 # ============================================================================
-#  @class AnnaMuMuFacade
+#  @class AnnaFacade
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30
 
 from logging import debug, error, warning
-from .AnnaMuMuConfig import SetCanvasStyle
+from .AnnaConfig import SetCanvasStyle
 import ROOT
 import math
 
 
-class AnnaMuMuSpectra():
-    """Container for AnnaMuMuResult
+class AnnaSpectra():
+    """Container for AnnaResult
 
-    AnnaMuMuResults are stored according to a specific binning into a TObjArray.
+    AnnaResults are stored according to a specific binning into a TObjArray.
 
     Extends:
         TNamed
@@ -24,7 +24,7 @@ class AnnaMuMuSpectra():
 
         self.name = name
         self.title = title
-        self.results = dict()   # where are stored the AnnaMuMuResults
+        self.results = dict()   # where are stored the AnnaResults
 
     # ______________________________________
     def AdoptResult(self, result, bin):

@@ -1,15 +1,15 @@
 # =============================================================================
-#  @class AnnaMuMuFacade
+#  @class AnnaFacade
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30
 
 # From the framework
-from .AnnaMuMuConfig import AnnaMuMuConfig
-from .AnnaMuMuFitter import AnnaMuMuFitter
+from .AnnaConfig import AnnaConfig
+from .AnnaFitter import AnnaFitter
 # Tuple bank
 import TupleBank as TupleBank
-import TupleBank.AnnaMuMuTupleJpsiPbPb
-import TupleBank.AnnaMuMuTupleJpsiPbPbV2
+import TupleBank.AnnaTupleJpsiPbPb
+import TupleBank.AnnaTupleJpsiPbPbV2
 # ROOT and Ostap
 import ROOT
 import Ostap.ZipShelve as DBASE
@@ -26,7 +26,7 @@ logging.basicConfig(
 
 
 # ______________________________________
-class AnnaMuMuFacade:
+class AnnaFacade:
 	"""
 	The framework is meant to work inside the LHCb framework
 	as it relies on OSTAP for the fits and the saving data.
@@ -41,7 +41,7 @@ class AnnaMuMuFacade:
 		- data2 : A second data object, not medatory, but usefull
 					in MC studies for instance (at the moment not implementeds).
 
-		- configfile : read by AnnaMuMuConfig to configure
+		- configfile : read by AnnaConfig to configure
 						our object (See AnnaConfig for details)
 
 	As a facade, each functions call a dedicade class inside the framework who
@@ -49,19 +49,19 @@ class AnnaMuMuFacade:
 	See the classes and functions documentations for more details.
 
 	Finally, all produced results are stored in a Ostap.ZipShelve object
-	in the same directory where AnnaMuMuFacade is used by default. One can
-	change the path if need using the config file (see AnnaMuMuConfig)
+	in the same directory where AnnaFacade is used by default. One can
+	change the path if need using the config file (see AnnaConfig)
 	"""
 
 	# ______________________________________
 	def __init__(self, data=None, data2=None, configfile=""):
 		""" cstr """
 
-		print(" ========== Init AnnaMuMuFacade ========== ")
+		print(" ========== Init AnnaFacade ========== ")
 
 		self._data = data
 		self._data2 = data2
-		self._configfile = AnnaMuMuConfig()
+		self._configfile = AnnaConfig()
 
 		# Set _configfile
 		info(" Try to read config file ...")
@@ -78,7 +78,7 @@ class AnnaMuMuFacade:
 		return "I am your father"
 
 	# ______________________________________
-	def CreateFilteredTuple(self, tuple_filter_name='AnnaMuMuTupleJpsiPbPb'):
+	def CreateFilteredTuple(self, tuple_filter_name='AnnaTupleJpsiPbPb'):
 		"""
 		Fill and save a filtered tuple from self._data after applying cuts
 		on leafs.
@@ -117,12 +117,12 @@ class AnnaMuMuFacade:
 
 					# Instance the object
 					try:
-						mumu_tuple = getattr(module, tuple_filter_name)(mother_leaf, dimuon_leaf)
+						_tuple = getattr(module, tuple_filter_name)(mother_leaf, dimuon_leaf)
 					except AttributeError:
 						error('Cannot find {} instance'.format(tuple_filter_name))
 
 					# Get the tuple
-					ntuple = mumu_tuple.GetTuple(self._data)
+					ntuple = _tuple.GetTuple(self._data)
 
 					if ntuple is not None:
 						self.SaveResult(
@@ -157,7 +157,7 @@ class AnnaMuMuFacade:
 		print(" ================================================================ ")
 
 		debug(
-			"FitParticle: AnnaMuMuConfig map : \n {}"
+			"FitParticle: AnnaConfig map : \n {}"
 			.format(self._configfile._map))
 
 		file = self.GetResultFile()
@@ -200,12 +200,12 @@ class AnnaMuMuFacade:
 		"""Main Fit method
 
 		Run over all combination of Centrality/Cut/Leaf from the config.
-		The fit process is passed to AnnaMuMuFitter class that return an
-		AnnaMuMuSpectra to be stored in the result TFile.
+		The fit process is passed to AnnaFitter class that return an
+		AnnaSpectra to be stored in the result TFile.
 
 		Keyword Arguments:
 			particle_name {str} -- To set the particle mass
-				in AnnaMuMuFitter (default: {"JPsi"})
+				in AnnaFitter (default: {"JPsi"})
 			binning {list} -- Binning conditions for the fit. (default: {[]})
 				Should be a list as [str(leaf_name), x.x, x.x, x.x ...]
 				example :
@@ -218,7 +218,7 @@ class AnnaMuMuFacade:
 		print(" ================================================================ ")
 
 		debug(
-			"FitParticle: AnnaMuMuConfig map : \n {}"
+			"FitParticle: AnnaConfig map : \n {}"
 			.format(self._configfile._map))
 
 		# Check data type
@@ -239,7 +239,7 @@ class AnnaMuMuFacade:
 						cut,
 						leaf
 					)
-					fitter = AnnaMuMuFitter(particle_name, binning)
+					fitter = AnnaFitter(particle_name, binning)
 					spectra = fitter.Fit(
 						self._data,
 						leaf,
@@ -263,7 +263,7 @@ class AnnaMuMuFacade:
 							cut,
 							leaf
 						)
-						fitter = AnnaMuMuFitter(particle_name, binning)
+						fitter = AnnaFitter(particle_name, binning)
 						spectra = fitter.Fit(
 							self._data2,
 							leaf,
@@ -296,24 +296,24 @@ class AnnaMuMuFacade:
 			# If the storing file is elsewhere
 			if file_path != "#":
 				sys.path.insert(0, file_path)
-				base = DBASE.open('AnnaMuMu')
+				base = DBASE.open('Anna')
 
 				if base is not None:
 					return base
 				else:
 					error(
-						'Cannot find AnnaMuMu file in {}'
+						'Cannot find Anna file in {}'
 						.format(file_path))
 					return None
 
 			else:
-				base = DBASE.open('AnnaMuMu')
+				base = DBASE.open('Anna')
 
 				if base is not None:
 					return base
 				else:
 					error(
-						'Cannot find AnnaMuMu file in {}'
+						'Cannot find Anna file in {}'
 						.format(file_path))
 					return None
 

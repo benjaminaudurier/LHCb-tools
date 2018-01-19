@@ -1,18 +1,17 @@
 # =============================================================================
-#  @class AnnaMuMuTupleJpsiPbPb
-#  Tuple filter for 2015 PbPb Analysis
+## @class AnnaTupleBase
+#  Mother class of all the sparse
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-12-21
 
-from logging import error
-from .AnnaMuMuTupleBase import AnnaMuMuTupleBase
+from logging import error, info
+from .AnnaTupleBase import AnnaTupleBase
 from ROOT import TNtuple, TVector3, TMath, TLorentzVector
 from Ostap.PyRoUts import *
-from logging import info
-
+from Ostap.progress_bar import ProgressBar
 
 # ______________________________________
-class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
+class AnnaTupleJpsiPbPbV2(AnnaTupleBase):
 
 	# ______________________________________
 	def __init__(self, mother_leaf='', dimuon_leafs=['', '']):
@@ -24,16 +23,15 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			name {str} -- (default: {''})
 		"""
 
-		AnnaMuMuTupleBase.__init__(
+		AnnaTupleBase.__init__(
 			self,
 			mother_leaf,
 			dimuon_leafs,
-			'AnnaMuMuTupleJpsiPbPb')
+			'AnnaTupleJpsiPbPbV2')
 
 		self.filter_mask["muon_mask"] = 'TRACK_GhostProb<0.5'\
 			'** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3.'\
 			'** IP_OWNPV<3.** PIDmu > 0 ** ETA < 4.5 ** ETA > 2.0 '
-
 		self.filter_mask["mother_mask"] = ''
 
 	# ______________________________________
@@ -109,20 +107,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 
 	# ______________________________________
 	def GetTuple(self, chain):
-		"""The main method of the class
 
-		Here the class run in all events in the tree/chain
-		and return a filled new tuple for events passing the
-		selection
-
-		Arguments:
-			chain {TChain}
-
-		Returns:
-			TNtuple
-		"""
-
-		general_mask = self.GetGeneralMask()
 		print(" ----> The following general mask will be applyied to the chain : \n")
 		print(
 			'-- muon_mask : {}'
@@ -135,13 +120,9 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			.format(self.filter_mask['other'].split('**')))
 		print(
 			"\n *** You may also want to check \n"
-			" *** AnnaMuMuTupleJpsiPbPb::IsInLuminosityRegion() \n"
-			" *** and AnnaMuMuTupleJpsiPbPb::IsMuonsGhosts() \n"
+			" *** AnnaTupleJpsiPbPbV2::IsInLuminosityRegion() \n"
+			" *** and AnnaTupleJpsiPbPbV2::IsMuonsGhosts() \n"
 			" *** where other cuts are also defined \n")
-
-		if general_mask is None:
-			error(':GetTuple: Cannot get the mask')
-			return None
 
 		ntuple = self.CreateTuple()
 		okBranch = self.CheckChainBranch(chain)
@@ -152,48 +133,61 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		# counters
 		entry_number = 0
 		entry_exlude = 0
+		tot_entries = chain.GetEntriesFast()
 		muon_all = list()
 
 		print(' --- Start running over events ...')
-		for entry in chain.withCuts(general_mask, progress=True):
-			entry_number += 1
+		with ProgressBar(max_value=tot_entries, silent=False) as bar:
+			for entry in chain:
+				entry_number += 1
+				bar.update_amount(entry_number)
 
-			# Check the vertex position
-			ok_lumi, v_OWNPV, v_ENDVERTEX = self.IsInLuminosityRegion(entry_number, entry)
-			if ok_lumi is False:
-				info("entry {} does not pass the luminosity cut".format(entry_number))
-				entry_exlude += 1
-				continue
+				ok_lumi, v_OWNPV, v_ENDVERTEX = self.IsInLuminosityRegion(entry_number, entry)
+				if ok_lumi is False:
+					info("entry {} does not pass the luminosity cut".format(entry_number))
+					entry_exlude += 1
+					continue
 
-			# Check muon ghost probability
-			is_ghost = self.IsMuonsGhosts(entry_number, entry, muon_all)
-			if is_ghost is True:
-				info("entry {} most likely have ghosts".format(entry_number))
-				entry_exlude += 1
-				continue
+				ok_muon = self.PassMuonCuts(entry_number, entry)
+				if ok_muon is False:
+					info("entry {} do not pass muons cut".format(entry_number))
+					entry_exlude += 1
+					continue
 
-			# Prepare Data
-			v_OWNPV -= v_ENDVERTEX
-			dZ = (
-				getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') -
-				getattr(entry, self.mother_leaf + '_OWNPV_Z')) * 1e-3
-			tZ = dZ * 3096.916 / (getattr(entry, self.mother_leaf + '_PZ') * TMath.C())
+				# Check muon ghost probability
+				is_ghost = self.IsMuonsGhosts(entry_number, entry, muon_all)
+				if is_ghost is True:
+					info("entry {} most likely have ghosts".format(entry_number))
+					entry_exlude += 1
+					continue
 
-			ntuple.Fill(
-				getattr(entry, self.mother_leaf + '_MM'),
-				getattr(entry, self.mother_leaf + '_PT'),
-				getattr(entry, self.mother_leaf + '_Y'),
-				getattr(entry, self.mother_leaf + '_OWNPV_Z'),
-				v_OWNPV.Mag(),
-				dZ,
-				tZ,
-				getattr(entry, self.dimuon_leafs[0] + '_PIDmu'),
-				getattr(entry, self.dimuon_leafs[1] + '_PIDmu'),
-				getattr(entry, self.dimuon_leafs[0] + '_PIDK'),
-				getattr(entry, self.dimuon_leafs[1] + '_PIDK'),
-				getattr(entry, 'eHcal'),
-				getattr(entry, 'eEcal'),
-				getattr(entry, 'nVeloClusters'))
+				ok_mother = self.PassMuonCuts(entry_number, entry)
+				if ok_mother is False:
+					info("entry {} do not pass mother cut".format(entry_number))
+					entry_exlude += 1
+					continue
+
+				# Prepare Data
+				rho = v_OWNPV.Perp()
+				v_OWNPV -= v_ENDVERTEX
+				dZ = (getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') - getattr(entry, self.mother_leaf + '_OWNPV_Z')) * 1e-3
+				tZ = dZ * 3096.916 / (getattr(entry, self.mother_leaf + '_PZ') * TMath.C())
+
+				ntuple.Fill(
+					getattr(entry, self.mother_leaf + '_MM'),
+					getattr(entry, self.mother_leaf + '_PT'),
+					getattr(entry, self.mother_leaf + '_Y'),
+					getattr(entry, self.mother_leaf + '_OWNPV_Z'),
+					v_OWNPV.Mag(),
+					dZ,
+					tZ,
+					getattr(entry, self.dimuon_leafs[0] + '_PIDmu'),
+					getattr(entry, self.dimuon_leafs[1] + '_PIDmu'),
+					getattr(entry, self.dimuon_leafs[0] + '_PIDK'),
+					getattr(entry, self.dimuon_leafs[1] + '_PIDK'),
+					getattr(entry, 'eHcal'),
+					getattr(entry, 'eEcal'),
+					getattr(entry, 'nVeloClusters'))
 
 		print(
 			' --- Done ! Ran over {} events with {:.1f}% removed from cuts !'
@@ -206,7 +200,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		require mother inside luminous region
 
 		Returns:
-			bool
+			bool -- [description]
 		"""
 		OWNPV_X = getattr(entry, self.mother_leaf + '_OWNPV_X')
 		OWNPV_Y = getattr(entry, self.mother_leaf + '_OWNPV_Y')
@@ -256,7 +250,7 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 		Check muons angle to see if not ghost particule
 
 		Returns:
-			Bool
+			Bool --
 		"""
 
 		muP = TLorentzVector()

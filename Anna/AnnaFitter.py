@@ -1,10 +1,10 @@
 # =============================================================================
-#  @class AnnaMuMuFitter
+#  @class AnnaFitter
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-11-30
 
-from .AnnaMuMuSpectra import AnnaMuMuSpectra
-from .AnnaMuMuResult import AnnaMuMuResult
+from .AnnaSpectra import AnnaSpectra
+from .AnnaResult import AnnaResult
 import ROOT
 # OSTAP modules
 from Ostap.PyRoUts import *
@@ -14,7 +14,7 @@ from logging import debug, error, warning, info
 import inspect
 
 
-class AnnaMuMuFitter:
+class AnnaFitter:
 	"""helper class for fit process.
 
 	This class comes with default binnings that can be set
@@ -398,12 +398,12 @@ class AnnaMuMuFitter:
 		(all combinations of centrality/cut/self._binning).
 
 		Each histos is fitted for all fit_types and stored in an
-		AnnaMuMuResult class ( referred as subresults in the code).
+		AnnaResult class ( referred as subresults in the code).
 
 		All subresults for a given binning are stored again in a
-		AnnaMuMuResult class ( referred as result in the code).
+		AnnaResult class ( referred as result in the code).
 
-		Finally, all results are stored in an AnnaMuMuSpectra class
+		Finally, all results are stored in an AnnaSpectra class
 		that is returned at the end of the method.
 
 		Arguments:
@@ -415,11 +415,11 @@ class AnnaMuMuFitter:
 			option {str}
 
 		Returns:
-			AnnaMuMuSpectra -- storage class for a results
+			AnnaSpectra -- storage class for a results
 		"""
 
 		# The spectra that will be return
-		spectra = AnnaMuMuSpectra(
+		spectra = AnnaSpectra(
 			name=self._particle_name + "_" + self.GetBinType(),
 			title=self._particle_name + "_" + self.GetBinType())
 
@@ -432,9 +432,9 @@ class AnnaMuMuFitter:
 		print(' --- histos retrived ...')
 		debug("Fit: histos = {}".format(histos))
 
-		# Construct our AnnaMuMuRestult for each histo or bins
+		# Construct our AnnaRestult for each histo or bins
 		annaresults = [
-			AnnaMuMuResult(self.GetBinType(), self.GetBinsAsString()[i])
+			AnnaResult(self.GetBinType(), self.GetBinsAsString()[i])
 			for i in range(0, len(histos))]
 
 		# Run over each AnnaResults (or bin or histos) and add subresults
@@ -467,14 +467,14 @@ class AnnaMuMuFitter:
 	def FitHisto(self, fit_methods, histo):
 		"""Fit Histogram for all fit_methods.
 
-		The result is stored in a AnnaMuMuResult
+		The result is stored in a AnnaResult
 
 		Arguments:
 			fit_methods {list} -- fit configuration string
 			histo {TH1} -- histo to be fitted
 
 		Returns:
-			list -- contains all the AnnaMuMuResults
+			list -- contains all the AnnaResults
 		"""
 
 		try:
@@ -535,9 +535,9 @@ class AnnaMuMuFitter:
 				ncpu=8)
 			debug("{}".format(result))
 
-			# Create the AnnaMuMuResult
+			# Create the AnnaResult
 			sr_name = "{}_{}".format(fit_method, histo.GetName())
-			sr = AnnaMuMuResult(name=sr_name, title=histo.GetTitle(), histo=histo)
+			sr = AnnaResult(name=sr_name, title=histo.GetTitle(), histo=histo)
 			sr.weigth = self._fit_key['weight']
 			sr.frame = frame
 			for key in result.parameters().keys():
