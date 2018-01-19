@@ -535,24 +535,6 @@ class AnnaMuMuFitter:
 				ncpu=8)
 			debug("{}".format(result))
 
-			# # Fit again if status is bad
-			# if result.status() != 1:
-			# 	attempt = 0
-			# 	while attempt < 3:
-			# 		print(
-			# 			'\n >>>>>> attempt to fit again ({} time) <<<<<< \n'
-			# 			.format(attempt + 1))
-			# 		result, frame = model.fitTo(
-			# 			histo,
-			# 			silent=False,
-			# 			draw=True,
-			# 			refit=True,
-			# 			chi2=False,
-			# 			ncpu=8)
-			# 		if result.status() == 1:
-			# 			break
-			# 		attempt += 1
-
 			# Create the AnnaMuMuResult
 			sr_name = "{}_{}".format(fit_method, histo.GetName())
 			sr = AnnaMuMuResult(name=sr_name, title=histo.GetTitle(), histo=histo)
