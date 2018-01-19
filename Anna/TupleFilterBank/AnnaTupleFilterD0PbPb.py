@@ -1,22 +1,22 @@
-# =============================================================================
-#  @class AnnaTupleJpsiPbPb
+# ============================================================================
+#  @class AnnaTupleFilterD0PbPb
 #  Tuple filter for 2015 PbPb Analysis
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-12-21
 
 from logging import error
-from .AnnaTupleBase import AnnaTupleBase
+from .AnnaTupleFilterBase import AnnaTupleFilterBase
 from ROOT import TNtuple, TVector3, TMath, TLorentzVector
 from Ostap.PyRoUts import *
 from logging import info
 
 
 # ______________________________________
-class AnnaTupleJpsiPbPb(AnnaTupleBase):
+class AnnaTupleFilterD0PbPb(AnnaTupleFilterBase):
 
 	# ______________________________________
 	def __init__(self, mother_leaf='', dimuon_leafs=['', '']):
-		"""THnSparse for Jpsi PbPb Analysis
+		"""THnSparse for D0 PbPb Analysis
 
 		Keyword Arguments:
 			mother_leaf {str} -- (default: {''})
@@ -24,11 +24,11 @@ class AnnaTupleJpsiPbPb(AnnaTupleBase):
 			name {str} -- (default: {''})
 		"""
 
-		AnnaTupleBase.__init__(
+		AnnaTupleFilterBase.__init__(
 			self,
 			mother_leaf,
 			dimuon_leafs,
-			'AnnaTupleJpsiPbPb')
+			'AnnaTupleFilterD0PbPb')
 
 		self.filter_mask["muon_mask"] = 'TRACK_GhostProb<0.5'\
 			'** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3.'\
@@ -135,8 +135,8 @@ class AnnaTupleJpsiPbPb(AnnaTupleBase):
 			.format(self.filter_mask['other'].split('**')))
 		print(
 			"\n *** You may also want to check \n"
-			" *** AnnaTupleJpsiPbPb::IsInLuminosityRegion() \n"
-			" *** and AnnaTupleJpsiPbPb::IsMuonsGhosts() \n"
+			" *** AnnaTupleFilterD0PbPb::IsInLuminosityRegion() \n"
+			" *** and AnnaTupleFilterD0PbPb::IsMuonsGhosts() \n"
 			" *** where other cuts are also defined \n")
 
 		if general_mask is None:

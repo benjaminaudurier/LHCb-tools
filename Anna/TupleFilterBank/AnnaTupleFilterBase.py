@@ -1,41 +1,39 @@
 # =============================================================================
-## @class AnnaTupleBase
+## @class AnnaTupleFilterBase
 #  Mother class of all the sparse
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-12-21
 
 from logging import error, warning,info
 
-class AnnaTupleBase:
+class AnnaTupleFilterBase:
 
 	# ______________________________________
-	def __init__(self, mother_leaf='', dimuon_leafs=['', ''], name=''):
+	def __init__(self, mother_leaf, daughter_leafs, name=''):
 		"""List of the minimal data members requiered
 
 		The filter_mask of daughter class should be of the form:
 
 		self.filter_mask =
 		{
-			'muon_mask': 'cut1**cut2**...**cutn',
+			'daughter_mask': 'cut1**cut2**...**cutn',
 			'mother_mask': 'cut1**cut2**...**cutn',
 			'other': 'cut1**cut2**...**cutn'
 		}
 
 		Note that by conventions, the variable (or branch) name must be
-		written before the condition. Also by convention :
-			dimuon_leafs[0] = mu_plus
-			dimuon_leafs[1] = mu_minus
+		written before the condition.
 
 		exemple :
 			"mother_mask": 'Y  < 4.5 ** Y > 2.0 ** MM < 3196.900 ** MM > 2996.900'
-		For more detailed example, see AnnaSparseJpsiPbPb
+		For more detailed example, see AnnaTupleFilterJpsiPbPb
 
 		Arguments:
 			name {str}
 		"""
-		self.dimuon_leafs = dimuon_leafs
+		self.daughter_leafs = daughter_leafs
 		self.filter_mask = {
-			'muon_mask': '',
+			'daughter_mask': '',
 			'mother_mask': '',
 			'other': ''}
 		self.mother_leaf = mother_leaf
@@ -53,14 +51,14 @@ class AnnaTupleBase:
 	def GetGeneralMask(self):
 
 		if self.filter_mask is None:
-			error("AnnaTupleBase:GetGeneralMask: no filter mask !")
+			error("AnnaTupleFilterBase:GetGeneralMask: no filter mask !")
 			return None
 
 		# Get masks
 		general_mask = ''
-		if self.filter_mask['muon_mask'] != '':
-			for leaf in self.dimuon_leafs:
-				for cut in self.filter_mask['muon_mask'].split('**'):
+		if self.filter_mask['daughter_mask'] != '':
+			for leaf in self.daughter_leafs:
+				for cut in self.filter_mask['daughter_mask'].split('**'):
 					general_mask += '{}_{}&&'.format(leaf, cut)
 
 		if self.filter_mask['mother_mask'] != '':
@@ -86,8 +84,8 @@ class AnnaTupleBase:
 			Bool
 		"""
 
-		for leaf in self.dimuon_leafs:
-			for cut in self.filter_mask['muon_mask'].replace(' ', '').split('**'):
+		for leaf in self.daughter_leafs:
+			for cut in self.filter_mask['daughter_mask'].replace(' ', '').split('**'):
 				suporinf = '>' if '>' in cut else '<'
 				att_name = cut.split(suporinf)[0]
 				try:

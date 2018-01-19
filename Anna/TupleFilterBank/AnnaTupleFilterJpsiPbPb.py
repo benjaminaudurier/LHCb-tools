@@ -1,17 +1,18 @@
 # =============================================================================
-## @class AnnaTupleBase
-#  Mother class of all the sparse
+#  @class AnnaTupleFilterJpsiPbPb
+#  Tuple filter for 2015 PbPb Analysis
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-12-21
 
-from logging import error, info
-from .AnnaTupleBase import AnnaTupleBase
+from logging import error
+from .AnnaTupleFilterBase import AnnaTupleFilterBase
 from ROOT import TNtuple, TVector3, TMath, TLorentzVector
 from Ostap.PyRoUts import *
-from Ostap.progress_bar import ProgressBar
+from logging import info
+
 
 # ______________________________________
-class AnnaTupleJpsiPbPbV2(AnnaTupleBase):
+class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 
 	# ______________________________________
 	def __init__(self, mother_leaf='', dimuon_leafs=['', '']):
@@ -23,15 +24,16 @@ class AnnaTupleJpsiPbPbV2(AnnaTupleBase):
 			name {str} -- (default: {''})
 		"""
 
-		AnnaTupleBase.__init__(
+		AnnaTupleFilterBase.__init__(
 			self,
 			mother_leaf,
 			dimuon_leafs,
-			'AnnaTupleJpsiPbPbV2')
+			'AnnaTupleFilterJpsiPbPb')
 
-		self.filter_mask["muon_mask"] = 'TRACK_GhostProb<0.5'\
+		self.filter_mask["daughter_mask"] = 'TRACK_GhostProb<0.5'\
 			'** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3.'\
 			'** IP_OWNPV<3.** PIDmu > 0 ** ETA < 4.5 ** ETA > 2.0 '
+
 		self.filter_mask["mother_mask"] = ''
 
 	# ______________________________________
@@ -101,28 +103,45 @@ class AnnaTupleJpsiPbPbV2(AnnaTupleBase):
 		return TNtuple(
 			self.name,
 			self.name,
-			"MM:PT:Y:Z:DV:dZ:tZ"
-			":plusPIDmu:minusPIDmu:plusPIDK:minusPIDK"
+			"{}_MM:{}_PT:{}_Y:{}_Z:{}_DV:{}_dZ:{}_tZ".format(self.mother_leaf)
+			":{0}_PIDmu:{1}_PIDmu:{0}_PIDK:{1}_PIDK".format(dimuon_leafs[0], dimuon_leafs[1])
 			":Hcal:Ecal:nVeloClusters")
 
 	# ______________________________________
 	def GetTuple(self, chain):
+		"""The main method of the class
 
+		Here the class run in all events in the tree/chain
+		and return a filled new tuple for events passing the
+		selection
+
+		Arguments:
+			chain {TChain}
+
+		Returns:
+			TNtuple
+		"""
+
+		general_mask = self.GetGeneralMask()
 		print(" ----> The following general mask will be applyied to the chain : \n")
 		print(
-			'-- muon_mask : {}'
-			.format(self.filter_mask['muon_mask'].split('**')))
+			'-- muon : {}'
+			.format(self.filter_mask['daughter_mask'].split('**')))
 		print(
-			'-- mother_mask : {}'
+			'-- Jpsi : {}'
 			.format(self.filter_mask['mother_mask'].split('**')))
 		print(
 			'-- other : {}'
 			.format(self.filter_mask['other'].split('**')))
 		print(
 			"\n *** You may also want to check \n"
-			" *** AnnaTupleJpsiPbPbV2::IsInLuminosityRegion() \n"
-			" *** and AnnaTupleJpsiPbPbV2::IsMuonsGhosts() \n"
+			" *** AnnaTupleFilterJpsiPbPb::IsInLuminosityRegion() \n"
+			" *** and AnnaTupleFilterJpsiPbPb::IsMuonsGhosts() \n"
 			" *** where other cuts are also defined \n")
+
+		if general_mask is None:
+			error(':GetTuple: Cannot get the mask')
+			return None
 
 		ntuple = self.CreateTuple()
 		okBranch = self.CheckChainBranch(chain)
@@ -133,61 +152,48 @@ class AnnaTupleJpsiPbPbV2(AnnaTupleBase):
 		# counters
 		entry_number = 0
 		entry_exlude = 0
-		tot_entries = chain.GetEntriesFast()
 		muon_all = list()
 
 		print(' --- Start running over events ...')
-		with ProgressBar(max_value=tot_entries, silent=False) as bar:
-			for entry in chain:
-				entry_number += 1
-				bar.update_amount(entry_number)
+		for entry in chain.withCuts(general_mask, progress=True):
+			entry_number += 1
 
-				ok_lumi, v_OWNPV, v_ENDVERTEX = self.IsInLuminosityRegion(entry_number, entry)
-				if ok_lumi is False:
-					info("entry {} does not pass the luminosity cut".format(entry_number))
-					entry_exlude += 1
-					continue
+			# Check the vertex position
+			ok_lumi, v_OWNPV, v_ENDVERTEX = self.IsInLuminosityRegion(entry_number, entry)
+			if ok_lumi is False:
+				info("entry {} does not pass the luminosity cut".format(entry_number))
+				entry_exlude += 1
+				continue
 
-				ok_muon = self.PassMuonCuts(entry_number, entry)
-				if ok_muon is False:
-					info("entry {} do not pass muons cut".format(entry_number))
-					entry_exlude += 1
-					continue
+			# Check muon ghost probability
+			is_ghost = self.IsMuonsGhosts(entry_number, entry, muon_all)
+			if is_ghost is True:
+				info("entry {} most likely have ghosts".format(entry_number))
+				entry_exlude += 1
+				continue
 
-				# Check muon ghost probability
-				is_ghost = self.IsMuonsGhosts(entry_number, entry, muon_all)
-				if is_ghost is True:
-					info("entry {} most likely have ghosts".format(entry_number))
-					entry_exlude += 1
-					continue
+			# Prepare Data
+			v_OWNPV -= v_ENDVERTEX
+			dZ = (
+				getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') -
+				getattr(entry, self.mother_leaf + '_OWNPV_Z')) * 1e-3
+			tZ = dZ * 3096.916 / (getattr(entry, self.mother_leaf + '_PZ') * TMath.C())
 
-				ok_mother = self.PassMuonCuts(entry_number, entry)
-				if ok_mother is False:
-					info("entry {} do not pass mother cut".format(entry_number))
-					entry_exlude += 1
-					continue
-
-				# Prepare Data
-				rho = v_OWNPV.Perp()
-				v_OWNPV -= v_ENDVERTEX
-				dZ = (getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') - getattr(entry, self.mother_leaf + '_OWNPV_Z')) * 1e-3
-				tZ = dZ * 3096.916 / (getattr(entry, self.mother_leaf + '_PZ') * TMath.C())
-
-				ntuple.Fill(
-					getattr(entry, self.mother_leaf + '_MM'),
-					getattr(entry, self.mother_leaf + '_PT'),
-					getattr(entry, self.mother_leaf + '_Y'),
-					getattr(entry, self.mother_leaf + '_OWNPV_Z'),
-					v_OWNPV.Mag(),
-					dZ,
-					tZ,
-					getattr(entry, self.dimuon_leafs[0] + '_PIDmu'),
-					getattr(entry, self.dimuon_leafs[1] + '_PIDmu'),
-					getattr(entry, self.dimuon_leafs[0] + '_PIDK'),
-					getattr(entry, self.dimuon_leafs[1] + '_PIDK'),
-					getattr(entry, 'eHcal'),
-					getattr(entry, 'eEcal'),
-					getattr(entry, 'nVeloClusters'))
+			ntuple.Fill(
+				getattr(entry, self.mother_leaf + '_MM'),
+				getattr(entry, self.mother_leaf + '_PT'),
+				getattr(entry, self.mother_leaf + '_Y'),
+				getattr(entry, self.mother_leaf + '_OWNPV_Z'),
+				v_OWNPV.Mag(),
+				dZ,
+				tZ,
+				getattr(entry, self.dimuon_leafs[0] + '_PIDmu'),
+				getattr(entry, self.dimuon_leafs[1] + '_PIDmu'),
+				getattr(entry, self.dimuon_leafs[0] + '_PIDK'),
+				getattr(entry, self.dimuon_leafs[1] + '_PIDK'),
+				getattr(entry, 'eHcal'),
+				getattr(entry, 'eEcal'),
+				getattr(entry, 'nVeloClusters'))
 
 		print(
 			' --- Done ! Ran over {} events with {:.1f}% removed from cuts !'
@@ -200,7 +206,7 @@ class AnnaTupleJpsiPbPbV2(AnnaTupleBase):
 		require mother inside luminous region
 
 		Returns:
-			bool -- [description]
+			bool
 		"""
 		OWNPV_X = getattr(entry, self.mother_leaf + '_OWNPV_X')
 		OWNPV_Y = getattr(entry, self.mother_leaf + '_OWNPV_Y')
@@ -250,34 +256,34 @@ class AnnaTupleJpsiPbPbV2(AnnaTupleBase):
 		Check muons angle to see if not ghost particule
 
 		Returns:
-			Bool --
+			Bool
 		"""
 
-		muP = TLorentzVector()
-		muM = TLorentzVector()
-		muP.SetPxPyPzE(
+		mu1 = TLorentzVector()
+		mu2 = TLorentzVector()
+		mu1.SetPxPyPzE(
 			getattr(entry, self.dimuon_leafs[0] + '_PX'),
 			getattr(entry, self.dimuon_leafs[0] + '_PY'),
 			getattr(entry, self.dimuon_leafs[0] + '_PZ'),
 			getattr(entry, self.dimuon_leafs[0] + '_PE'))
-		muM.SetPxPyPzE(
+		mu2.SetPxPyPzE(
 			getattr(entry, self.dimuon_leafs[1] + '_PX'),
 			getattr(entry, self.dimuon_leafs[1] + '_PY'),
 			getattr(entry, self.dimuon_leafs[1] + '_PZ'),
 			getattr(entry, self.dimuon_leafs[1] + '_PE'))
 
 		if entry_number == 1:
-			all_muons.append([muP, muM])
+			all_muons.append([mu1, mu2])
 			return False
 		else:
 
 			for cand in all_muons:
-				deltaThetaMuM = cand[0].Angle(muP.Vect())
-				deltaThetaMuM = cand[1].Angle(muM.Vect())
+				deltaThetaMu1 = cand[0].Angle(mu1.Vect())
+				deltaThetaMu2 = cand[1].Angle(mu2.Vect())
 
-				if deltaThetaMuM > 0.9999 and deltaThetaMuM > 0.9999:
+				if deltaThetaMu1 > 0.9999 and deltaThetaMu2 > 0.9999:
 					return True
-		all_muons.append([muP, muM])
+		all_muons.append([mu1, mu2])
 		return False
 
 # =============================================================================

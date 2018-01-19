@@ -7,9 +7,9 @@
 from .AnnaConfig import AnnaConfig
 from .AnnaFitter import AnnaFitter
 # Tuple bank
-import TupleBank as TupleBank
-import TupleBank.AnnaTupleJpsiPbPb
-import TupleBank.AnnaTupleJpsiPbPbV2
+import TupleFilterBank as TupleFilterBank
+import TupleFilterBank.AnnaTupleFilterJpsiPbPb
+import TupleFilterBank.AnnaTupleFilterJpsiPbPbV2
 # ROOT and Ostap
 import ROOT
 import Ostap.ZipShelve as DBASE
@@ -59,13 +59,13 @@ class AnnaFacade:
 
 		print(" ========== Init AnnaFacade ========== ")
 
-		self._data = data
-		self._data2 = data2
-		self._configfile = AnnaConfig()
+		self.data = data
+		self.data2 = data2
+		self.configfile = AnnaConfig()
 
-		# Set _configfile
+		# Set configfile
 		info(" Try to read config file ...")
-		if self._configfile.ReadFromFile(configfile) is True:
+		if self.configfile.ReadFromFile(configfile) is True:
 			info(" config file set !")
 
 		else:
@@ -78,9 +78,9 @@ class AnnaFacade:
 		return "I am your father"
 
 	# ______________________________________
-	def CreateFilteredTuple(self, tuple_filter_name='AnnaTupleJpsiPbPb'):
+	def CreateFilteredTuple(self, tuple_filter_name='AnnaTupleFilterJpsiPbPb'):
 		"""
-		Fill and save a filtered tuple from self._data after applying cuts
+		Fill and save a filtered tuple from self.data after applying cuts
 		on leafs.
 		"""
 
@@ -89,21 +89,21 @@ class AnnaFacade:
 		print(" ================================================================ \n\n")
 
 		# Check data type
-		if self._data is not None:
-			if isinstance(self._data, ROOT.TChain) is False:
-				error('Need a ROOT.TChain instead of {} !'.format(type(self._data)))
+		if self.data is not None:
+			if isinstance(self.data, ROOT.TChain) is False:
+				error('Need a ROOT.TChain instead of {} !'.format(type(self.data)))
 				return
 		else:
 			error('Need something to run on !')
 			return
 
-		for mother_leaf in self._configfile.GetMotherLeaf():
+		for mother_leaf in self.configfile.map['MotherLeaf']:
 			if mother_leaf == "#":
 				continue
-			for muplus_leaf in self._configfile.GetMuonPlusLeaf():
+			for muplus_leaf in self.configfile.GetMuonPlusLeaf():
 				if muplus_leaf == "#":
 					continue
-				for muminus_leaf in self._configfile.GetMuonMinusLeaf():
+				for muminus_leaf in self.configfile.GetMuonMinusLeaf():
 					if muminus_leaf == "#":
 						continue
 
@@ -111,18 +111,18 @@ class AnnaFacade:
 
 					# get the module
 					try:
-						module = getattr(TupleBank, tuple_filter_name)
+						module = getattr(TupleFilterBank, tuple_filter_name)
 					except AttributeError:
 						error('Cannot find {} module'.format(tuple_filter_name))
 
 					# Instance the object
 					try:
-						_tuple = getattr(module, tuple_filter_name)(mother_leaf, dimuon_leaf)
+						TupleFilter = getattr(module, tuple_filter_name)(mother_leaf, dimuon_leaf)
 					except AttributeError:
 						error('Cannot find {} instance'.format(tuple_filter_name))
 
 					# Get the tuple
-					ntuple = _tuple.GetTuple(self._data)
+					ntuple = TupleFilter.GetTuple(self.data)
 
 					if ntuple is not None:
 						self.SaveResult(
@@ -158,21 +158,21 @@ class AnnaFacade:
 
 		debug(
 			"FitParticle: AnnaConfig map : \n {}"
-			.format(self._configfile._map))
+			.format(self.configfile._map))
 
 		file = self.GetResultFile()
 		if file is None:
 			return
 
-		for centrality in self._configfile.GetCentrality():
-			for cut in self._configfile.GetCutCombination():
-				for leaf in self._configfile.GetMotherLeaf():
+		for centrality in self.configfile.map['Centrality']:
+			for cut in self.configfile.map['CutCombination']:
+				for leaf in self.configfile.map['MotherLeaf']:
 
 					print("---------------------")
 					print("Looking for spectras ...")
 
 					spectrapath = "{}/FitParticle/{}/{}/{}".format(
-						self._data.GetName(),
+						self.data.GetName(),
 						centrality,
 						cut,
 						leaf)
@@ -219,33 +219,33 @@ class AnnaFacade:
 
 		debug(
 			"FitParticle: AnnaConfig map : \n {}"
-			.format(self._configfile._map))
+			.format(self.configfile._map))
 
 		# Check data type
-		if self._data is not None:
-			if isinstance(self._data, ROOT.TNtuple) is False:
-				error('Need a ROOT.TNtuple instead of {} !'.format(type(self._data)))
+		if self.data is not None:
+			if isinstance(self.data, ROOT.TNtuple) is False:
+				error('Need a ROOT.TNtuple instead of {} !'.format(type(self.data)))
 				return
 		else:
 			error('Need something to run on !')
 			return
 
-		for centrality in self._configfile.GetCentrality():
-			for cut in self._configfile.GetCutCombination():
-				for leaf in self._configfile.GetMotherLeaf():
+		for centrality in self.configfile.map['Centrality']:
+			for cut in self.configfile.map['CutCombination']:
+				for leaf in self.configfile.map['MotherLeaf']:
 					spectrapath = "{}/FitParticle/{}/{}/{}".format(
-						self._data.GetName(),
+						self.data.GetName(),
 						centrality,
 						cut,
 						leaf
 					)
 					fitter = AnnaFitter(particle_name, binning)
 					spectra = fitter.Fit(
-						self._data,
+						self.data,
 						leaf,
 						centrality,
 						cut,
-						self._configfile.GetFitType(),
+						self.configfile.map['FitType'],
 						option
 					)
 					if spectra is None:
@@ -253,23 +253,23 @@ class AnnaFacade:
 						continue
 					self.SaveResult(spectra, spectrapath)
 
-					if self._data2 is not None:
-						if isinstance(self._data, ROOT.NTuple):
+					if self.data2 is not None:
+						if isinstance(self.data, ROOT.NTuple):
 							error('Need a ROOT.TNtuple for second data object!')
 							return
 						spectrapath = "{}/FitParticle/{}/{}/{}".format(
-							self._data2.GetName(),
+							self.data2.GetName(),
 							centrality,
 							cut,
 							leaf
 						)
 						fitter = AnnaFitter(particle_name, binning)
 						spectra = fitter.Fit(
-							self._data2,
+							self.data2,
 							leaf,
 							centrality,
 							cut,
-							self._configfile.GetFitType(),
+							self.configfile.map['FitType'],
 							option
 						)
 						if spectra is None:
@@ -283,7 +283,7 @@ class AnnaFacade:
 		Return the result file, creates one if necessary
 		"""
 
-		file_path = self._configfile.GetResultFilePath()
+		file_path = self.configfile.map['ResultFilePath']
 
 		# Check if several entrie
 		if file_path is not None:
@@ -308,7 +308,6 @@ class AnnaFacade:
 
 			else:
 				base = DBASE.open('Anna')
-
 				if base is not None:
 					return base
 				else:
@@ -329,7 +328,7 @@ class AnnaFacade:
 			result_path {[type]} -- path inside AnnaResults.root
 		"""
 
-		# Create / get results file in the local directory """ 
+		# Create / get results file in the local directory """
 		db = self.GetResultFile()
 
 		if db is not None:

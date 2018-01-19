@@ -16,14 +16,13 @@ class AnnaConfig:
 	# ______________________________________
 	def __init__(self):
 		""" cstr """
-		self._map = dict()
-		self._key = (
+		self.map = dict()
+		self.keys = (
 			"Centrality",
 			"CutCombination",
 			"FitType",
 			"MotherLeaf",
-			"MuplusLeaf",
-			"MuminusLeaf",
+			"DaughterLeafs",
 			"ResultFilePath")
 
 	# ______________________________________
@@ -48,7 +47,7 @@ class AnnaConfig:
 		with open(configfile, "r") as file:
 			lines = file.readlines()
 
-			for key_name in self._key:
+			for key_name in self.keys:
 				entries = []
 
 				# Find and store all the entries for a given key
@@ -62,52 +61,16 @@ class AnnaConfig:
 
 				# Add to map
 				if len(entries) > 0:
-					self._map[key_name] = entries
+					self.map[key_name] = entries
 				else:
 					warning("No entries for key {}, set default".format(key_name))
-					self._map[key_name] = self.GetDefaultEntry(key_name)
+					self.map[key_name] = self.GetDefaultEntry(key_name)
 
 			return True
 
 	# ______________________________________
-	def GetCentrality(self):
-		return self._map["Centrality"]
-
-	# ______________________________________
-	def GetCutCombination(self):
-		return self._map["CutCombination"]
-
-	# ______________________________________
-	def GetFitType(self):
-		return self._map["FitType"]
-
-	# ______________________________________
-	def GetMotherLeaf(self):
-		return self._map["MotherLeaf"]
-
-	# ______________________________________
-	def GetMuonPlusLeaf(self):
-		return self._map["MuplusLeaf"]
-
-	# ______________________________________
-	def GetMuonMinusLeaf(self):
-		return self._map["MuminusLeaf"]
-
-	# ______________________________________
-	def GetResultFilePath(self):
-		return self._map["ResultFilePath"]
-
-	# ______________________________________
 	def GetDefaultEntry(self, key_name):
 		return "#"
-
-	# ______________________________________
-	def PrintKey(self):
-		print(self._key)
-
-	# ______________________________________
-	def PrintMap(self):
-		print(self._map)
 
 	# ______________________________________
 	def DecodeLine(self, line=""):
