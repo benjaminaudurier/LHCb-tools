@@ -59,27 +59,27 @@ class AnnaMuMuFitter:
 			"weight": None}
 
 		# Mass map
-		self._mass_map = {
+		self._mean_map = {
 			"JPsi": ROOT.RooRealVar(
-				'JPsi_mass', 'J/psi(1S) mass', 2900., 3300.),
+				'JPsi_mean', 'J/psi(1S) mean', 3000., 3200.),
 			"PsiP": ROOT.RooRealVar(
-				'PsiP_mass', 'Psi(2S) mass', 3600., 3800.),
+				'PsiP_mean', 'Psi(2S) mean', 3600., 3800.),
 			"Upsilon": ROOT.RooRealVar(
-				'Upsilon_mass', 'Upsilon (1S) mass', 8500., 10500.),
+				'Upsilon_mean', 'Upsilon (1S) mean', 8500., 10500.),
 			"UpsilonPrime": ROOT.RooRealVar(
-				'UpsilonPrime_mass', 'Upsilon (2S) mass', 9000., 11000.)}
+				'UpsilonPrime_mean', 'Upsilon (2S) mean', 9000., 11000.)}
 
 		# width map
 		self._width_map = {
 			"JPsi": ROOT.RooRealVar(
-				'JPsi_sigma', 'J/psi(1S) sigma', 5., 70.)}
+				'JPsi_width', 'J/psi(1S) width', 5., 100.)}
 
 		# Set particule name
 		try:
-			assert particle in self._mass_map.keys()
+			assert particle in self._mean_map.keys()
 		except AssertionError:
 			error('''Wrong entry for particle ({}),
-				possibles are {}'''.self._mass_map.keys())
+				possibles are {}'''.self._mean_map.keys())
 			return None
 		self._particle_name = particle
 
@@ -220,7 +220,7 @@ class AnnaMuMuFitter:
 		return cut_update
 
 	# ______________________________________
-	def CreateBackgroundPDF(self):
+	def CreateBackgroundPDF(self, range):
 		"""
 		Configure and return the background PDF
 		"""
@@ -234,7 +234,7 @@ class AnnaMuMuFitter:
 
 		background = getattr(Models, self._fit_key['bkgr'])(
 			'bkgr',
-			mass=self._mass_map[self._particle_name])
+			mass=range)
 
 		# Due to Ostap architectur, data members of PDF can't be set
 		# after initiating the function. Therefor, one must find bellow
@@ -250,7 +250,7 @@ class AnnaMuMuFitter:
 
 			background = getattr(Models, self._fit_key['bkgr'])(
 				'bkgr',
-				mass=self._mass_map[self._particle_name],
+				mass=range,
 				power=int(param['power']))
 		else:
 			warning(
@@ -260,7 +260,7 @@ class AnnaMuMuFitter:
 		return background
 
 	# ______________________________________
-	def CreateSignalPDF(self):
+	def CreateSignalPDF(self, range):
 		"""
 		Configure and return the signal PDF
 
@@ -280,9 +280,8 @@ class AnnaMuMuFitter:
 		# Default PDF object
 		sig = getattr(Models, self._fit_key['signal'])(
 			'signal',
-			mass=self._mass_map[self._particle_name],
-			# mn=self._mass_map[self._particle_name].getMin(),
-			# mx=self._mass_map[self._particle_name].getMax(),
+			mass=range,
+			mean=self._mean_map[self._particle_name],
 			sigma=self._width_map[self._particle_name])
 
 		# Due to Ostap architectur, data members of PDF can't be set
@@ -302,9 +301,8 @@ class AnnaMuMuFitter:
 
 			sig = getattr(Models, self._fit_key['signal'])(
 				'signal',
-				mass=self._mass_map[self._particle_name],
-				mn=self._mass_map[self._particle_name].getMin(),
-				mx=self._mass_map[self._particle_name].getMax(),
+				mass=range,
+				mean=self._mean_map[self._particle_name],
 				sigma=self._width_map[self._particle_name],
 				alphaL=param['alL'],
 				alphaR=param['alR'],
@@ -322,9 +320,8 @@ class AnnaMuMuFitter:
 
 			sig = getattr(Models, self._fit_key['signal'])(
 				'signal',
-				mass=self._mass_map[self._particle_name],
-				# mn=self._mass_map[self._particle_name].getMin(),
-				# mx=self._mass_map[self._particle_name].getMax(),
+				mass=range,
+				mean=self._mean_map[self._particle_name],
 				sigma=self._width_map[self._particle_name],
 				alpha=param['alpha'],
 				n=param['n'])
@@ -386,7 +383,7 @@ class AnnaMuMuFitter:
 			try:
 				assert key is not None or value is not None
 			except AssertionError:
-				print('Error : Invalid key=value pair ' + pair)
+				error('Invalid key=value pair ' + pair)
 			debug("key = %s, value = %s".format(key, value))
 
 			self._fit_key[key] = value
@@ -493,16 +490,35 @@ class AnnaMuMuFitter:
 			# Get the fit configuration
 			self.DecodeFitType(fit_method)
 
+			# Redefine the fit range to the histo boundaries
+			hmin = histo.GetXaxis().GetXmin()
+			hmax = histo.GetXaxis().GetXmax()
+			if 'range' in self._fit_key.keys():
+				hmin = min(self._fit_key['range'])
+				hmax = max(self._fit_key['range'])
+
+			fit_range = ROOT.RooRealVar(
+				histo.GetXaxis().GetName(),
+				histo.GetXaxis().GetTitle(),
+				hmin,
+				hmax)
+
 			# get PDF and create fit model
-			signal = self.CreateSignalPDF()
+			signal = self.CreateSignalPDF(fit_range)
 			if signal is None:
 				continue
-			background = self.CreateBackgroundPDF()
+			background = self.CreateBackgroundPDF(fit_range)
 			if background is None:
 				continue
 
 			# return None
 			model = Models.Fit1D(signal=signal, background=background)
+
+			data = ROOT.RooDataHist(
+				histo.GetName(),
+				histo.GetTitle(),
+				ROOT.RooArgList(fit_range),
+				histo)
 
 			print(
 				" \n------- > with {} + {} (weight = {} ) \n"
@@ -510,13 +526,12 @@ class AnnaMuMuFitter:
 					self._fit_key['signal'],
 					self._fit_key['bkgr'],
 					self._fit_key['weight']))
+
 			result, frame = model.fitTo(
-				histo,
+				data,
 				silent=False,
 				draw=True,
 				refit=True,
-				sumw2=True,
-				chi2=False,
 				ncpu=8)
 			debug("{}".format(result))
 
@@ -628,27 +643,30 @@ class AnnaMuMuFitter:
 		# This is just sweet :)
 		histo_cuts = [
 			self.ConfigureCuts(centrality, cut, bintype, bin_limits)
-			for bin_limits in bin_all
-		]
+			for bin_limits in bin_all]
 		debug("histo_cuts : {}".format(histo_cuts))
 
 		for i, histo_cut in enumerate(histo_cuts):
 			print(' --- Getting histo from leaf {} with cut {}'.format(leaf, histo_cut))
-			command = '{}>>histo'.format(leaf)
-			tuple.Draw(command, histo_cut, "goff")
+			histo = ROOT.TH1F(
+				'histo', 'histo',
+				100, tuple.GetMinimum(leaf) + 1, tuple.GetMaximum(leaf))
+			tuple.Project('histo', leaf, histo_cut)
+			# command = '{}>>histo'.format(leaf)
+			# tuple.Draw(command, histo_cut, "goff")
+
+			# try:
+			# 	assert ROOT.gDirectory.Get("histo") is not None
+			# except AssertionError:
+			# 	error("cannot get histo from leaf {} ... continue".format(leaf))
+			# 	continue
 
 			try:
-				assert ROOT.gDirectory.Get("histo") is not None
+				assert histo.GetEntries() > 0
 			except AssertionError:
-				error("cannot get histo from leaf {} ... continue".format(leaf))
-				continue
-
-			try:
-				histo_list.append(ROOT.gDirectory.Get("histo").Clone())
-			except ReferenceError:
 				error("could not get histo with cut {}".format(histo_cut))
 				continue
-
+			histo_list.append(histo)
 			histo_list[i].SetName("{}_{}".format(leaf, bin_all[i]))
 
 		return histo_list

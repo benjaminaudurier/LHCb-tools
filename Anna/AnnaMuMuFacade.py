@@ -12,7 +12,6 @@ import TupleBank.AnnaMuMuTupleJpsiPbPb
 import TupleBank.AnnaMuMuTupleJpsiPbPbV2
 # ROOT and Ostap
 import ROOT
-import Ostap
 import Ostap.ZipShelve as DBASE
 from Ostap.PyRoUts import *
 # Python
@@ -20,10 +19,11 @@ import sys
 import logging
 from logging import debug, error, info, warning
 logging.basicConfig(
-	filename='Anna.log',
+	# filename='Anna.log',
 	format='%(filename)s -- %(funcName)s -- %(levelname)s: \t\t %(message)s',
 	level=logging.DEBUG,
 	filemode='w+')
+
 
 # ______________________________________
 class AnnaMuMuFacade:

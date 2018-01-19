@@ -1,6 +1,6 @@
 # =============================================================================
-## @class AnnaMuMuTupleBase
-#  Mother class of all the sparse
+#  @class AnnaMuMuTupleJpsiPbPb
+#  Tuple filter for 2015 PbPb Analysis
 #  @author Benjamin AUDURIER benjamin.audurier@ca.infn.it
 #  @date   2017-12-21
 
@@ -9,6 +9,7 @@ from .AnnaMuMuTupleBase import AnnaMuMuTupleBase
 from ROOT import TNtuple, TVector3, TMath, TLorentzVector
 from Ostap.PyRoUts import *
 from logging import info
+
 
 # ______________________________________
 class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
@@ -34,7 +35,6 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 			'** IP_OWNPV<3.** PIDmu > 0 ** ETA < 4.5 ** ETA > 2.0 '
 
 		self.filter_mask["mother_mask"] = ''
-
 
 	# ______________________________________
 	def CheckChainBranch(self, chain):
@@ -173,9 +173,9 @@ class AnnaMuMuTupleJpsiPbPb(AnnaMuMuTupleBase):
 				continue
 
 			# Prepare Data
-			rho = v_OWNPV.Perp()
 			v_OWNPV -= v_ENDVERTEX
-			dZ = (getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') -
+			dZ = (
+				getattr(entry, self.mother_leaf + '_ENDVERTEX_Z') -
 				getattr(entry, self.mother_leaf + '_OWNPV_Z')) * 1e-3
 			tZ = dZ * 3096.916 / (getattr(entry, self.mother_leaf + '_PZ') * TMath.C())
 
