@@ -98,7 +98,10 @@ class AnnaConfig:
 
 		debug("key: {} / value: {}".format(split_line[0], split_line[1]))
 
-		return split_line[0], split_line[1]
+		if "|" in split_line[1]:
+			return split_line[0], split_line[1].split("|")
+		else:
+			return split_line[0], split_line[1]
 
 # ______________________________________
 def SetCanvasStyle(canvas):

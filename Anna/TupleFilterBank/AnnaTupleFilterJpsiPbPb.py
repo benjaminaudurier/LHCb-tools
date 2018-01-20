@@ -15,26 +15,24 @@ from logging import info
 class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 
 	# ______________________________________
-	def __init__(self, mother_leaf='', dimuon_leafs=['', '']):
+	def __init__(self, mother_leaf='', daughter_leafs=['']):
 		"""THnSparse for Jpsi PbPb Analysis
 
 		Keyword Arguments:
 			mother_leaf {str} -- (default: {''})
-			dimuon_leafs {list} -- (default: {[''})
+			daughter_leafs {list} -- (default: {[''})
 			name {str} -- (default: {''})
 		"""
 
-		AnnaTupleFilterBase.__init__(
-			self,
-			mother_leaf,
-			dimuon_leafs,
-			'AnnaTupleFilterJpsiPbPb')
+		AnnaTupleFilterBase.__init__(self, mother_leaf, daughter_leafs)
+		self.name = 'AnnaTupleFilterJpsiPbPb'
 
-		self.filter_mask["daughter_mask"] = 'TRACK_GhostProb<0.5'\
+		self.filter_mask["dimuon_mask"] = 'TRACK_GhostProb<0.5'\
 			'** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3.'\
-			'** IP_OWNPV<3.** PIDmu > 0 ** ETA < 4.5 ** ETA > 2.0 '
+			'** IP_OWNPV<3.** PIDmu > 3 ** ETA < 4.5 ** ETA > 2.0 '
 
-		self.filter_mask["mother_mask"] = ''
+		self.filter_mask["mother_mask"] = 'Y< 4.5 ** Y> 2.0'
+		self.filter_mask["other"] = 'nPVs > 0'
 
 	# ______________________________________
 	def CheckChainBranch(self, chain):
@@ -71,7 +69,7 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 				return False
 
 		# dimuon info
-		for muon in self.dimuon_leafs:
+		for muon in self.daughter_leafs:
 			for attr in ['_PIDmu', '_CosTheta', '_PIDK', '_ETA']:
 				try:
 					assert str(muon + attr) in chain.GetListOfBranches()
@@ -103,9 +101,39 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 		return TNtuple(
 			self.name,
 			self.name,
-			"{}_MM:{}_PT:{}_Y:{}_Z:{}_DV:{}_dZ:{}_tZ".format(self.mother_leaf)
-			":{0}_PIDmu:{1}_PIDmu:{0}_PIDK:{1}_PIDK".format(dimuon_leafs[0], dimuon_leafs[1])
-			":Hcal:Ecal:nVeloClusters")
+			"{0}_MM:{0}_PT:{0}_Y:{0}_Z:{0}_DV:{0}_dZ:{0}_tZ:{1}_PIDmu:{2}_PIDmu:{1}_PIDK:{2}_PIDK:Hcal:Ecal:nVeloClusters"
+			.format(self.mother_leaf, self.daughter_leafs[0], self.daughter_leafs[1]))
+
+	# ______________________________________
+	def GetGeneralMask(self):
+		"""Return the general cut masks
+		to be applied before running over
+		Chain events
+
+		Returns:
+			[str] -- [description]
+		"""
+
+		if self.filter_mask is None:
+			error(" no filter mask !")
+			return None
+
+		# Get masks
+		general_mask = ''
+		if self.filter_mask['dimuon_mask'] != '':
+			for leaf in self.daughter_leafs:
+				for cut in self.filter_mask['dimuon_mask'].split('**'):
+					general_mask += '{}_{}&&'.format(leaf, cut)
+
+		if self.filter_mask['mother_mask'] != '':
+			for cut in self.filter_mask['mother_mask'].split('**'):
+					general_mask += '{}_{}&&'.format(self.mother_leaf, cut)
+
+		if self.filter_mask['other'] != '':
+			for cut in self.filter_mask['other'].split('**'):
+					general_mask += '{}&&'.format(cut)
+
+		return str(general_mask[:-2]).replace(" ", "")
 
 	# ______________________________________
 	def GetTuple(self, chain):
@@ -126,7 +154,7 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 		print(" ----> The following general mask will be applyied to the chain : \n")
 		print(
 			'-- muon : {}'
-			.format(self.filter_mask['daughter_mask'].split('**')))
+			.format(self.filter_mask['dimuon_mask'].split('**')))
 		print(
 			'-- Jpsi : {}'
 			.format(self.filter_mask['mother_mask'].split('**')))
@@ -187,10 +215,10 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 				v_OWNPV.Mag(),
 				dZ,
 				tZ,
-				getattr(entry, self.dimuon_leafs[0] + '_PIDmu'),
-				getattr(entry, self.dimuon_leafs[1] + '_PIDmu'),
-				getattr(entry, self.dimuon_leafs[0] + '_PIDK'),
-				getattr(entry, self.dimuon_leafs[1] + '_PIDK'),
+				getattr(entry, self.daughter_leafs[0] + '_PIDmu'),
+				getattr(entry, self.daughter_leafs[1] + '_PIDmu'),
+				getattr(entry, self.daughter_leafs[0] + '_PIDK'),
+				getattr(entry, self.daughter_leafs[1] + '_PIDK'),
 				getattr(entry, 'eHcal'),
 				getattr(entry, 'eEcal'),
 				getattr(entry, 'nVeloClusters'))
@@ -251,9 +279,10 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 		return True, v_OWNPV, v_ENDVERTEX
 
 	# ______________________________________
-	def IsMuonsGhosts(self, entry_number, entry, all_muons):
+	def IsMuonsGhosts(self, entry_number, entry, prev_muons):
 		"""
-		Check muons angle to see if not ghost particule
+		Check if muon angls between current candidate
+		and previous one are not too close
 
 		Returns:
 			Bool
@@ -262,28 +291,32 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 		mu1 = TLorentzVector()
 		mu2 = TLorentzVector()
 		mu1.SetPxPyPzE(
-			getattr(entry, self.dimuon_leafs[0] + '_PX'),
-			getattr(entry, self.dimuon_leafs[0] + '_PY'),
-			getattr(entry, self.dimuon_leafs[0] + '_PZ'),
-			getattr(entry, self.dimuon_leafs[0] + '_PE'))
+			getattr(entry, self.daughter_leafs[0] + '_PX'),
+			getattr(entry, self.daughter_leafs[0] + '_PY'),
+			getattr(entry, self.daughter_leafs[0] + '_PZ'),
+			getattr(entry, self.daughter_leafs[0] + '_PE'))
 		mu2.SetPxPyPzE(
-			getattr(entry, self.dimuon_leafs[1] + '_PX'),
-			getattr(entry, self.dimuon_leafs[1] + '_PY'),
-			getattr(entry, self.dimuon_leafs[1] + '_PZ'),
-			getattr(entry, self.dimuon_leafs[1] + '_PE'))
+			getattr(entry, self.daughter_leafs[1] + '_PX'),
+			getattr(entry, self.daughter_leafs[1] + '_PY'),
+			getattr(entry, self.daughter_leafs[1] + '_PZ'),
+			getattr(entry, self.daughter_leafs[1] + '_PE'))
 
 		if entry_number == 1:
-			all_muons.append([mu1, mu2])
+			prev_muons.append(mu1)
+			prev_muons.append(mu2)
 			return False
 		else:
 
-			for cand in all_muons:
-				deltaThetaMu1 = cand[0].Angle(mu1.Vect())
-				deltaThetaMu2 = cand[1].Angle(mu2.Vect())
+			deltaThetaMu1 = prev_muons[0].Angle(mu1.Vect())
+			deltaThetaMu2 = prev_muons[1].Angle(mu2.Vect())
 
-				if deltaThetaMu1 > 0.9999 and deltaThetaMu2 > 0.9999:
-					return True
-		all_muons.append([mu1, mu2])
+			if deltaThetaMu1 > 0.9999 and deltaThetaMu2 > 0.9999:
+				prev_muons[0] = mu1
+				prev_muons[1] = mu2
+				return True
+
+		prev_muons[0] = mu1
+		prev_muons[1] = mu2
 		return False
 
 # =============================================================================

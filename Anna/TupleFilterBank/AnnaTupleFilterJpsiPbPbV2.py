@@ -280,6 +280,81 @@ class AnnaTupleFilterJpsiPbPbV2(AnnaTupleFilterBase):
 		all_muons.append([muP, muM])
 		return False
 
+		# ______________________________________
+	def PassMuonCuts(self, entry_number, entry):
+		"""
+		Check muons angle to see if not ghost particule
+
+		Returns:
+			Bool
+		"""
+
+		for leaf in self.daughter_leafs:
+			for cut in self.filter_mask['daughter_mask'].replace(' ', '').split('**'):
+				suporinf = '>' if '>' in cut else '<'
+				att_name = cut.split(suporinf)[0]
+				try:
+					attribute = getattr(entry, str(leaf + '_' + att_name))
+				except AttributeError:
+					warning(
+						"No info {}_{} in entry {}"
+						.format(leaf, att_name, entry_number))
+					return False
+
+				if suporinf == '>' and attribute > float(cut.split(suporinf)[1]):
+					continue
+				elif suporinf == '<' and attribute < float(cut.split(suporinf)[1]):
+					continue
+				else:
+					info(
+						" {}_{} = {:.2f} (cut : {}{:.2f})"
+						.format(
+							leaf,
+							att_name,
+							attribute,
+							suporinf,
+							float(cut.split(suporinf)[1])))
+					return False
+
+		return True
+
+	# ______________________________________
+	def PassMotherCuts(self, entry_number, entry):
+		"""
+		Check muons angle to see if not ghost particule
+
+		Returns:
+			Bool
+		"""
+
+		for cut in self.filter_mask['mother_mask'].replace(' ', '').split('**'):
+			suporinf = '>' if '>' in cut else '<'
+			att_name = cut.split(suporinf)[0]
+			try:
+				attribute = getattr(entry, str(self.mother_leaf + '_' + att_name))
+			except AttributeError:
+				warning(
+					"No info {}_{} in entry {}"
+					.format(self.mother_leaf, att_name, entry_number))
+				return False
+
+			if suporinf == '>' and attribute > float(cut.split(suporinf)[1]):
+				continue
+			elif suporinf == '<' and attribute < float(cut.split(suporinf)[1]):
+				continue
+			else:
+				info(
+					" {}_{} = {:.2f} (cut : {}{:.2f}) "
+					.format(
+						self.mother_leaf,
+						att_name,
+						attribute,
+						suporinf,
+						float(cut.split(suporinf)[1])))
+				return False
+
+		return True
+
 # =============================================================================
 # The END
 # =============================================================================
