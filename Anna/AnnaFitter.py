@@ -362,7 +362,7 @@ class AnnaFitter:
             try:
                 assert key is not None or value is not None
             except AssertionError:
-                error('Invalid key=value pair ' + pair)
+                error('Invalid key=value pair ' + key)
                 return False
             debug("key = %s, value = %s".format(key, value))
             try:
@@ -491,8 +491,8 @@ class AnnaFitter:
             hmin = histo.GetXaxis().GetXmin()
             hmax = histo.GetXaxis().GetXmax()
             if 'range' in self._fit_key.keys():
-                hmin = min(self._fit_key['range'])
-                hmax = max(self._fit_key['range'])
+                hmin = min(self._fit_key['range'].split(';'))
+                hmax = max(self._fit_key['range'].split(';'))
 
             fit_range = ROOT.RooRealVar(
                 histo.GetXaxis().GetName(),
@@ -629,7 +629,7 @@ class AnnaFitter:
             print(' --- Getting histo from leaf {} with cut {}'.format(leaf, histo_cut))
             histo = ROOT.TH1F(
                 'histo', 'histo',
-                100, tuple.GetMinimum(leaf) + 1, tuple.GetMaximum(leaf))
+                80, tuple.GetMinimum(leaf) + 1, tuple.GetMaximum(leaf))
             tuple.Project('histo', leaf, histo_cut)
 
             try:

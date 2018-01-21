@@ -29,7 +29,7 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 
 		self.filter_mask["dimuon_mask"] = 'TRACK_GhostProb<0.5'\
 			'** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3.'\
-			'** IP_OWNPV<3.** PIDmu > 3 ** ETA < 4.5 ** ETA > 2.0 '
+			'** IP_OWNPV<3.** PIDmu > 0 ** ETA < 4.5 ** ETA > 2.0 '
 
 		self.filter_mask["mother_mask"] = 'Y< 4.5 ** Y> 2.0'
 		self.filter_mask["other"] = 'nPVs > 0'
