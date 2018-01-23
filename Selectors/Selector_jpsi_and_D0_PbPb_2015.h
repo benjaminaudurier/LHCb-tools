@@ -1368,8 +1368,8 @@ public :
    virtual void    Terminate();
 
    // added by me
-   Int_t    IsEventSelected();
-   bool    hasGhosts();
+   bool IsEventSelected();
+   bool hasGhosts();
 
    ClassDef(Selector_jpsi_and_D0_PbPb_2015,0);
 

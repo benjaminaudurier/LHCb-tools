@@ -54,151 +54,16 @@ void Selector_jpsi_and_D0_PbPb_2015::SlaveBegin(TTree * /*tree*/)
 
    TString option = GetOption();
 
-   // Bin definitions for the THnSparse
-   Int_t nBins_MM       = 50;
-   Double_t MM_low_edge = 2900.;
-   Double_t MM_up_edge  = 3300.;
-
-   Int_t nBins_PT        = 100;
-   Double_t PT_low_edge = 0.;
-   Double_t PT_up_edge  = 10000.;
-
-   Int_t nBins_Y       = 2;
-   Double_t Y_low_edge = 2.;
-   Double_t Y_up_edge  = 4.5;
-
-   Int_t nBins_OWNPV_Z        = 500;
-   Double_t OWNPV_Z_low_edge = -1000.;
-   Double_t OWNPV_Z_up_edge  =  1000.;
-
-   Int_t nBins_ENDVERTEX_Z        = 500;
-   Double_t ENDVERTEX_Z_low_edge = -1000.;
-   Double_t ENDVERTEX_Z_up_edge  =  1000.;
-
-   Int_t nBins_DistV        = 200;
-   Double_t DistV_low_edge =  0.;
-   Double_t DistV_up_edge  =   10.;
-
-   Int_t nBins_dZ        = 200;
-   Double_t dZ_low_edge =  -10.;
-   Double_t dZ_up_edge  =   10.;
-
-   Int_t nBins_tZ        = 400;
-   Double_t tZ_low_edge =  -20.;
-   Double_t tZ_up_edge  =   20.;
-
-   Int_t nBins_MuPlus_PIDmu        = 500;
-   Double_t MuPlus_PIDmu_low_edge = -30.;
-   Double_t MuPlus_PIDmu_up_edge  =  30.;
-
-   Int_t nBins_MuMinus_PIDmu        = 500;
-   Double_t MuMinus_PIDmu_low_edge = -30.;
-   Double_t MuMinus_PIDmu_up_edge  =  30.;
-
-   Int_t nBins_MuPlus_PIDK        = 500;
-   Double_t MuPlus_PIDK_low_edge = -30.;
-   Double_t MuPlus_PIDK_up_edge  =  30.;
-
-   Int_t nBins_MuMinus_PIDK        = 500;
-   Double_t MuMinus_PIDK_low_edge = -30.;
-   Double_t MuMinus_PIDK_up_edge  =  30.;
-
-   Int_t nBins_eHcal        =  500;
-   Double_t eHcal_low_edge =   0.;
-   Double_t eHcal_up_edge  =  1.1e7;
-
-   Int_t nBins_eEcal        =  500;
-   Double_t eEcal_low_edge =   0.;
-   Double_t eEcal_up_edge  =   1.1e7;
-
-   Int_t nBins_nVeloClusters        = 200;
-   Double_t nVeloClusters_low_edge =   0.;
-   Double_t nVeloClusters_up_edge  =   20000.;
-
-   enum {
-      kMMaxis,
-      kPTaxis,
-      kYaxis,
-      kZaxis,
-      kDistVaxis,
-      kdZaxis,
-      ktZaxis,
-      kMuPlusPIDmuaxis,
-      kMuMinusPIDmuaxis,
-      kMuPlusPIDKaxis,
-      kMuMinusPIDKaxis,
-      keHcal,
-      keEcal,
-      kVeloClusters,
-      kNaxis};
-
-   TNtuple *nt = new TNtuple("nt","nt","MM:PT:Y:Z:DV:dZ:tZ:plusPIDmu:minusPIDmu:plusPIDK:minusPIDK:Hcal:Ecal:Velo");
+   TNtuple *nt = new TNtuple("nt","nt","Jpsi_MM:Jpsi_PT:Jpsi_Y:Jpsi_OWNPV_Z:DV:dZ:tZ:Hcal:Ecal:nVeloClusters");
    GetOutputList()->Add(nt);
-
-   Int_t bins[]     = {
-      nBins_MM,
-      nBins_PT,
-      nBins_Y,
-      nBins_OWNPV_Z,
-      nBins_DistV,
-      nBins_dZ,
-      nBins_tZ,
-      nBins_MuPlus_PIDmu,
-      nBins_MuMinus_PIDmu,
-      nBins_MuPlus_PIDK,
-      nBins_MuMinus_PIDK,
-      nBins_eHcal,
-      nBins_eEcal,
-      nBins_nVeloClusters};
-   Double_t lbins[] = {
-      MM_low_edge,
-      PT_low_edge,
-      Y_low_edge,
-      OWNPV_Z_low_edge,
-      DistV_low_edge,
-      dZ_low_edge,
-      tZ_low_edge,
-      MuPlus_PIDmu_low_edge,
-      MuMinus_PIDmu_low_edge,
-      MuPlus_PIDK_low_edge,
-      MuMinus_PIDK_low_edge,
-      eHcal_low_edge,
-      eEcal_low_edge,
-      nVeloClusters_low_edge};
-   Double_t hbins[] = {
-      MM_up_edge,
-      PT_up_edge,
-      Y_up_edge,
-      OWNPV_Z_up_edge,
-      DistV_up_edge,
-      dZ_up_edge,
-      tZ_up_edge,
-      MuPlus_PIDmu_up_edge,
-      MuMinus_PIDmu_up_edge,
-      MuPlus_PIDK_up_edge,
-      MuMinus_PIDK_up_edge,
-      eHcal_up_edge,
-      eEcal_up_edge,
-      nVeloClusters_up_edge};
-
-   THnSparseD *hn = new THnSparseD("hSparse","hSparse", kNaxis, bins, lbins, hbins );
-   hn->GetAxis( kMMaxis )->SetTitle( "MM( #mu^{+}#mu^{-}) [MeV/c^{2}]" );
-   hn->GetAxis( kPTaxis )->SetTitle( "p_{T}( #mu^{+}#mu^{-}) [MeV/c]" );
-   hn->GetAxis( kYaxis )->SetTitle( "rapidity ( #mu^{+}#mu^{-})" );
-   hn->GetAxis( kZaxis )->SetTitle( "OWNPV_Z [mm]" );
-   hn->GetAxis( kDistVaxis )->SetTitle( "Delta(OWNPV-ENDVERTEX) [mm]" );
-   hn->GetAxis( kMuPlusPIDmuaxis )->SetTitle( "MuPlus PIDmu" );
-   hn->GetAxis( kMuMinusPIDmuaxis )->SetTitle( "MuMinus PIDmu" );
-   hn->GetAxis( kMuPlusPIDKaxis )->SetTitle( "MuPlus PIDK" );
-   hn->GetAxis( kMuMinusPIDKaxis )->SetTitle( "MuMinus PIDK" );
-   hn->GetAxis( keHcal )->SetTitle("eHcal [MeV]" );
-   hn->GetAxis( keEcal )->SetTitle("eEcal [MeV]" );
-   hn->GetAxis( kVeloClusters )->SetTitle( "nVeloClusters" );
-   GetOutputList()->Add(hn);
 
    // Control Histio
    TH1F *hruns = new TH1F("hruns","runs",169618-168487,168487,169618);
    GetOutputList()->Add(hruns);
+
+   TH1F *hexEvent = new TH1F("hexEvent","runs",169618-168487,168487,169618);
+   GetOutputList()->Add(hexEvent);
+
 
    // Used in hasGhosts
    TObjArray* mup = new TObjArray();
@@ -232,21 +97,27 @@ Bool_t Selector_jpsi_and_D0_PbPb_2015::Process(Long64_t entry)
    fReader.SetLocalEntry(entry);
 
    // print progress
-   if(static_cast<int>(entry)%10000 == 0)
-      printf("Proccess event %d \n", static_cast<int>(entry));
+   //if(static_cast<int>(entry)%10000 == 0)
+      //printf("Proccess event %d \n", static_cast<int>(entry));
 
 
    // Get object to fill
    TNtuple *nt  = static_cast<TNtuple*>(GetOutputList()->FindObject("nt"));
    TH1F *hruns  = static_cast<TH1F*>(GetOutputList()->FindObject("hruns"));
-   THnSparseD *hsparse = static_cast<THnSparseD*>(GetOutputList()->FindObject("hSparse"));
+   TH1F *hexEvent  = static_cast<TH1F*>(GetOutputList()->FindObject("hexEvent"));
+
 
    // for cross checks
    hruns->Fill( *runNumber );
 
    // Check the event candidates
-   if ( IsEventSelected() < 1 ) return kFALSE;
-   if ( hasGhosts() ) return kFALSE;
+   if ( ! IsEventSelected() ) {
+
+	  hexEvent->Fill( *runNumber );
+	  return kFALSE;
+   }
+
+   // if ( hasGhosts() ) return kFALSE;
 
    // Prepare data
    TVector3 v_OWNPV( *Jpsi_OWNPV_X, *Jpsi_OWNPV_Y, *Jpsi_OWNPV_Z);
@@ -260,30 +131,7 @@ Bool_t Selector_jpsi_and_D0_PbPb_2015::Process(Long64_t entry)
    Double_t dZ = (*Jpsi_ENDVERTEX_Z - *Jpsi_OWNPV_Z)*1e-3; // in metres
    Double_t tZ = dZ * 3096.916/(*Jpsi_PZ * TMath::C());
 
-   // Fill object
-   Double_t data[] = {
-      *Jpsi_MM,
-      *Jpsi_PT,
-      *Jpsi_Y,
-      *Jpsi_OWNPV_Z,
-      v_OWNPV.Mag(),
-      dZ,
-      tZ,
-      *muplus_PIDmu,
-      *muminus_PIDmu,
-      *muplus_PIDK,
-      *muminus_PIDK,
-      *eHcal,
-      *eEcal,
-      static_cast<Double_t>(*nVeloClusters)
-    };
-  hsparse->Fill(data);
-
-  int N = sizeof(data)/sizeof(data[0]);
-  Float_t *dataF = new Float_t[N];
-  for( int i=0;i<N;i++) dataF[i] = data[i];
-  nt->Fill( dataF );
-  delete[] dataF;
+   nt->Fill( *Jpsi_MM, *Jpsi_PT, *Jpsi_Y, *Jpsi_OWNPV_Z, v_OWNPV.Mag(), dZ, tZ, *eHcal, *eEcal, static_cast<Double_t>(*nVeloClusters) );
 
    return kTRUE;
 }
@@ -308,20 +156,15 @@ void Selector_jpsi_and_D0_PbPb_2015::Terminate()
    // Get the output object
    TNtuple *nt  = static_cast<TNtuple*>(GetOutputList()->FindObject("nt"));
    TH1F *hruns  = static_cast<TH1F*>(GetOutputList()->FindObject("hruns"));
-   THnSparseD *hsparse = static_cast<THnSparseD*>(GetOutputList()->FindObject("hSparse"));
-
+   TH1F *hexEvent  = static_cast<TH1F*>(GetOutputList()->FindObject("hexEvent"));
 
    // save results
    TFile outputfile("Selector_jpsi_and_D0_PbPb_2015.root","recreate");
    nt->Write();
    hruns->Write();
-   hsparse->Write();
+   hexEvent->Write();
 
    outputfile.Close();
-
-   // if ( GetOutputList()->FindObject("mum") ) delete GetOutputList()->FindObject("mum") ;
-   // if ( GetOutputList()->FindObject("mup") ) delete GetOutputList()->FindObject("mup") ;
-
 }
 
 
@@ -351,19 +194,18 @@ bool Selector_jpsi_and_D0_PbPb_2015::hasGhosts()
       double deltaThetaMuP = -999.0;
       double deltaThetaMuM = -999.0;
 
-      temp_mum->SetPx( *muplus_PX);
-      temp_mum->SetPy( *muplus_PY);
-      temp_mum->SetPz( *muplus_PZ);
-      temp_mum->SetE(  *muplus_PE);
+      temp_mup->SetPxPyPzE(*muplus_PX, *muplus_PY, *muplus_PZ, *muplus_PE);
       temp_mup->SetPxPyPzE(*muminus_PX, *muminus_PY, *muminus_PZ, *muminus_PE);
 
       for(int icand=0; icand < mum->GetEntriesFast(); icand++) {
          deltaThetaMuM = static_cast<TLorentzVector*>(mum->At(icand))->Angle(temp_mum->Vect());
+
          for(int jcand=0; jcand < mup->GetEntriesFast(); jcand++) {
             deltaThetaMuP = static_cast<TLorentzVector*>(mup->At(jcand))->Angle(temp_mup->Vect());
             if(cos(deltaThetaMuP)>0.9999 && cos(deltaThetaMuM)>0.9999) return kTRUE;
          }
       }
+
       mum->Add(temp_mum);
       mup->Add(temp_mup);
       delete temp_mum;
@@ -377,7 +219,7 @@ bool Selector_jpsi_and_D0_PbPb_2015::hasGhosts()
 }
 
 // ______________________________________________________
-Int_t Selector_jpsi_and_D0_PbPb_2015::IsEventSelected()
+bool Selector_jpsi_and_D0_PbPb_2015::IsEventSelected()
 {
    // This function may be called from Loop.
    // returns  1 if entry is accepted.
@@ -386,10 +228,10 @@ Int_t Selector_jpsi_and_D0_PbPb_2015::IsEventSelected()
    // ------------------------------------------
    //  Luminosity cut
    // ------------------------------------------
-   if( *nPVs < 1 ) return -1;
+   if( *nPVs < 1 ) return kFALSE;
 
-   if( ! (*Jpsi_OWNPV_Z > -200. && *Jpsi_OWNPV_Z < 200. ) ) return -1;
-   if( ! (*Jpsi_ENDVERTEX_Z > -200. && *Jpsi_ENDVERTEX_Z < 200. ) ) return -1;
+   if( *Jpsi_OWNPV_Z < -200. || *Jpsi_OWNPV_Z > 200. ) return kFALSE;
+   if( *Jpsi_ENDVERTEX_Z < -200. || *Jpsi_ENDVERTEX_Z > 200. ) return kFALSE;
 
    // create vectors of the vertices
    TVector3 v_OWNPV(*Jpsi_OWNPV_X,*Jpsi_OWNPV_Y,*Jpsi_OWNPV_Z);
@@ -398,39 +240,31 @@ Int_t Selector_jpsi_and_D0_PbPb_2015::IsEventSelected()
    Double_t OWNPV_R = v_OWNPV.Perp();
    Double_t ENDVERTEX_R = v_ENDVERTEX.Perp();
 
-   if( ! ( OWNPV_R > 0.35 && OWNPV_R < 0.95 ) ) return -1;
-   if( ! ( ENDVERTEX_R > 0.35 && ENDVERTEX_R < 0.95 ) ) return -1;
+   if( OWNPV_R < 0.35 || OWNPV_R > 0.95 ) return kFALSE;
+   if( ENDVERTEX_R < 0.35 || ENDVERTEX_R > 0.95 ) return kFALSE;
 
    // ------------------------------------------
    //  Jpsi selection
    // ------------------------------------------
 
-   if (!(*muplus_PT>750. && *muminus_PT>750.)) return -1;
-
-   if ( *muplus_TRACK_GhostProb  > 0.5) return -1;
-   if ( *muminus_TRACK_GhostProb > 0.5) return -1;
-
-   if ( *muplus_ProbNNghost  > 0.8) return -1;
-   if ( *muminus_ProbNNghost  > 0.8) return -1;
+   // muon dynamical cuts
+   if ( *muplus_PT < 750. || *muminus_PT< 750. ) return kFALSE;
 
    // goodness of the muon track
-   if ( *muplus_TRACK_CHI2NDOF > 3. )  return -1;
-   if ( *muminus_TRACK_CHI2NDOF > 3. ) return -1;
+   if ( *muplus_TRACK_GhostProb  > 0.5 || *muminus_TRACK_GhostProb > 0.5 ) return kFALSE;
+   if ( *muplus_ProbNNghost > 0.8 || *muminus_ProbNNghost > 0.8 ) return kFALSE;
+   if ( *muplus_TRACK_CHI2NDOF > 3. || *muminus_TRACK_CHI2NDOF > 3. )  return kFALSE;
 
    // muon track close to the vertex
-   if ( *muplus_IP_OWNPV > 3. ) return -1;
-   if ( *muminus_IP_OWNPV > 3. ) return -1;
+   if ( *muplus_IP_OWNPV > 3. || *muminus_IP_OWNPV > 3. ) return kFALSE;
 
    // muon id
-   if ( *muplus_PIDmu <  3. ) return -1;
-   if ( *muminus_PIDmu < 3. ) return -1;
+   if ( *muplus_PIDmu <  3. || *muminus_PIDmu < 3. ) return kFALSE;
+   // if ( *muplus_PIDK >  6. || *muminus_PIDK > 6. ) return kFALSE;
 
-   //if ( *muplus_PIDK >  6. ) return -1;
-   //if ( *muminus_PIDK > 6. ) return -1;
+   // Jpsi cuts
+   // if ( *Jpsi_MM < 2900. || *Jpsi_MM > 3200. ) return kFALSE;
+   if ( TMath::Prob(*Jpsi_ENDVERTEX_CHI2, *Jpsi_ENDVERTEX_NDOF) < 0.5/100.0 ) return kFALSE;
 
-   // goodness of the dimuon vertex
-   if ( TMath::Prob(*Jpsi_ENDVERTEX_CHI2, *Jpsi_ENDVERTEX_NDOF) < 0.5/100.0 ) return -1;
-
-
-   return 1;
+   return kTRUE;
 }
