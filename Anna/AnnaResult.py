@@ -516,8 +516,7 @@ class AnnaResult():
 			except KeyError:
 				debug(
 					"Error : Don't find value " +
-					subresult_name +
-					" in map")
+					subresult_name + " in map")
 				return 0
 			return 1
 
