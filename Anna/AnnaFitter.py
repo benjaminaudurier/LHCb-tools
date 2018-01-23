@@ -61,7 +61,7 @@ class AnnaFitter:
         # Mass map
         self._mean_map = {
             "JPsi": ROOT.RooRealVar(
-                'JPsi_mean', 'J/psi(1S) mean', 3000., 3200.),
+                'JPsi_mean', 'J/psi(1S) mean', 3080., 3120.),
             "PsiP": ROOT.RooRealVar(
                 'PsiP_mean', 'Psi(2S) mean', 3600., 3800.),
             "Upsilon": ROOT.RooRealVar(
@@ -72,7 +72,7 @@ class AnnaFitter:
         # width map
         self._width_map = {
             "JPsi": ROOT.RooRealVar(
-                'JPsi_width', 'J/psi(1S) width', 5., 100.)}
+                'JPsi_width', 'J/psi(1S) width', 5., 15.)}
 
         # Set particule name
         try:
@@ -353,7 +353,6 @@ class AnnaFitter:
         Returns:
             bool -- If the fit is correctly decoded
         """
-        print fit_type
         # Always reset the data member at each fit_type
         self._fit_key["weight"] = 1
 
@@ -491,14 +490,15 @@ class AnnaFitter:
             hmin = histo.GetXaxis().GetXmin()
             hmax = histo.GetXaxis().GetXmax()
             if 'range' in self._fit_key.keys():
-                hmin = min(self._fit_key['range'].split(';'))
-                hmax = max(self._fit_key['range'].split(';'))
+                if self._fit_key['range'] is not None:
+                    print self._fit_key['range']
+                    hmin = float(min(self._fit_key['range'].split(';')))
+                    hmax = float(max(self._fit_key['range'].split(';')))
 
             fit_range = ROOT.RooRealVar(
                 histo.GetXaxis().GetName(),
                 histo.GetXaxis().GetTitle(),
-                hmin,
-                hmax)
+                hmin, hmax)
 
             # get PDF and create fit model
             signal = self.CreateSignalPDF(fit_range)
@@ -629,7 +629,7 @@ class AnnaFitter:
             print(' --- Getting histo from leaf {} with cut {}'.format(leaf, histo_cut))
             histo = ROOT.TH1F(
                 'histo', 'histo',
-                80, tuple.GetMinimum(leaf) + 1, tuple.GetMaximum(leaf))
+                100, tuple.GetMinimum(leaf), tuple.GetMaximum(leaf))
             tuple.Project('histo', leaf, histo_cut)
 
             try:
