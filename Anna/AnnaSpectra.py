@@ -85,7 +85,7 @@ class AnnaSpectra():
 
                 quantity.append(
                     [
-                        'S',
+                        "N" + particle_name,
                         subresult.GetValue('S'),
                         subresult.GetErrorStat('S')
                     ]) if subresult.HasValue('S') > 0 \
@@ -103,7 +103,7 @@ class AnnaSpectra():
 
                 quantity.append(
                     [
-                        particle_name + '_mean',
+                        ' mean',
                         subresult.GetValue(particle_name + '_mean'),
                         subresult.GetErrorStat(particle_name + '_mean')
                     ]) if subresult.HasValue(particle_name + '_mean') > 0 \
@@ -111,11 +111,11 @@ class AnnaSpectra():
 
                 quantity.append(
                     [
-                        particle_name + "_width",
-                        subresult.GetValue(particle_name + "_width"),
-                        subresult.GetErrorStat(particle_name + "_width")
-                    ]) if subresult.HasValue(particle_name + "_width" > 0)\
-                    else quantity.append([particle_name + "_width", 0., 0.])
+                        ' width',
+                        subresult.GetValue(particle_name + '_width'),
+                        subresult.GetErrorStat(particle_name + '_width')
+                    ]) if subresult.HasValue(particle_name + '_width') > 0 \
+                    else quantity.append([particle_name + '_width', 0., 0.])
 
         if len(frame_list) == 0:
             error('Cannot retrived any frame')
@@ -144,14 +144,14 @@ class AnnaSpectra():
             frame.Draw('same')
 
             # --- Config. first legend pad ---
-            leg = ROOT.TLegend(0.6,0.6,0.9,0.85)
+            leg = ROOT.TLegend(0.6, 0.6, 0.9, 0.85)
             ROOT.SetOwnership(leg, False)
             leg.SetTextSize(0.03)
             leg.SetBorderSize(0)
 
             for q in quantity:
                 leg.AddEntry(
-                        '','{} : {:.1f} +- {:.1f}'.format(q[0], q[1], q[2]))
+                    '', '{} : {:.1f} +- {:.1f}'.format(q[0], q[1], q[2]))
             leg.Draw("same")
 
     # ______________________________________
