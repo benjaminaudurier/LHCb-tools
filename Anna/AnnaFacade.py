@@ -129,8 +129,8 @@ class AnnaFacade:
         return
 
     # ______________________________________
-    def DrawFitResults(self, particle_name="JPsi", spectra_name="", filter_name
-                    = '', subresults=None):
+    def DrawFitResults(self, particle_name="JPsi", spectra_name="",
+        root='', subresults=None):
         """Draw all fit results
 
         Draw all results/subresults (i.e fit functions) spectras on a single canvas
@@ -139,6 +139,7 @@ class AnnaFacade:
         Arguments:
             particle_name {str} -- (default: {"JPsi"})
             spectra_name {str} -- The name of the spectra
+            root {str} -- The name of the root in the data file
             subresults {list} -- a specific list of subresults if needed
 
         """
@@ -171,7 +172,7 @@ class AnnaFacade:
                     print("Looking for spectras ...")
 
                     spectrapath = "{}/FitParticle/{}/{}/{}".format(
-                        filter_name,
+                        root,
                         centrality,
                         cut,
                         leaf)
