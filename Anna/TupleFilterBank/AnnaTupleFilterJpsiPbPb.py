@@ -27,12 +27,12 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 		AnnaTupleFilterBase.__init__(self, mother_leaf, daughter_leafs)
 		self.name = 'AnnaTupleFilterJpsiPbPb'
 
-		self.filter_mask["dimuon_mask"] = 'TRACK_GhostProb<0.5'\
+		self.filter_mask["dimuon_mask"] = 'TRACK_GhostProb<0.5 '\
 			'** ProbNNghost<0.8 ** TRACK_CHI2NDOF<3.'\
-			'** IP_OWNPV<3.** PIDmu > 0 ** ETA < 4.5 ** ETA > 2.0 '
+			'** IP_OWNPV<3.** PIDmu > 3 ** ETA<4.5 ** ETA>2.0'
 
-		self.filter_mask["mother_mask"] = 'Y< 4.5 ** Y> 2.0'
-		self.filter_mask["other"] = 'nPVs > 0'
+		self.filter_mask["mother_mask"] = 'Y<4.5 ** Y>2.0'
+		self.filter_mask["other"] = 'nPVs>0'
 
 	# ______________________________________
 	def CheckChainBranch(self, chain):
@@ -79,14 +79,13 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 
 			for axis in ['X', 'Y', 'Z', 'E']:
 				try:
-					assert str(muon + '_P' + axis) \
-						in chain.GetListOfBranches()
+					assert str(muon + '_P' + axis) in chain.GetListOfBranches()
 				except AssertionError:
 					error(" No info {}_P{} branch in chain".format(muon, axis))
 					return False
 
 		# other
-		for attr in ['eHcal', 'eEcal']:
+		for attr in ['eHcal', 'eEcal', 'runNumber']:
 			try:
 				assert attr in chain.GetListOfBranches()
 			except AssertionError:
@@ -101,8 +100,8 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 		return TNtuple(
 			self.name,
 			self.name,
-			"{0}_MM:{0}_PT:{0}_Y:{0}_Z:{0}_DV:{0}_dZ:{0}_tZ:{1}_PIDmu:{2}_PIDmu:{1}_PIDK:{2}_PIDK:Hcal:Ecal:nVeloClusters"
-			.format(self.mother_leaf, self.daughter_leafs[0], self.daughter_leafs[1]))
+			"{0}_MM:{0}_PT:{0}_Y:{0}_Z:{0}_DV:{0}_dZ:{0}_tZ:nVeloClusters:runNumber"
+			.format(self.mother_leaf))
 
 	# ______________________________________
 	def GetGeneralMask(self):
@@ -215,13 +214,8 @@ class AnnaTupleFilterJpsiPbPb(AnnaTupleFilterBase):
 				v_OWNPV.Mag(),
 				dZ,
 				tZ,
-				getattr(entry, self.daughter_leafs[0] + '_PIDmu'),
-				getattr(entry, self.daughter_leafs[1] + '_PIDmu'),
-				getattr(entry, self.daughter_leafs[0] + '_PIDK'),
-				getattr(entry, self.daughter_leafs[1] + '_PIDK'),
-				getattr(entry, 'eHcal'),
-				getattr(entry, 'eEcal'),
-				getattr(entry, 'nVeloClusters'))
+				getattr(entry, 'nVeloClusters'),
+				getattr(entry, 'runNumber'),)
 
 		print(
 			' --- Done ! Ran over {} events with {:.1f}% removed from cuts !'
